@@ -1,11 +1,31 @@
-import numpy as np
-import pandas as pd
 import yfinance as yf
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
-def compare_portfolio_to_market(tickers: list, investments : list, start_date:str, end_date:str, market_index:str ='^GSPC'):
+def get_currency(ticker):
+    """Fetch the currency of the given ticker using yfinance."""
+    ticker_info = yf.Ticker(ticker).info
+    return ticker_info['currency']
+
+def get_exchange_rate(base_currency, quote_currency, start_date, end_date):
+    """Fetch the historical exchange rates from quote_currency to base_currency."""
+    if base_currency == quote_currency:
+        return None  # No conversion needed
+
+    exchange_rate_ticker = f'{quote_currency}{base_currency}=X'
+    exchange_rate_data = yf.download(exchange_rate_ticker, start=start_date, end=end_date)['Adj Close']
+    return exchange_rate_data
+
+def convert_to_base_currency(prices, exchange_rate):
+    """Convert prices to the base currency using the exchange rate."""
+    if exchange_rate is None:
+        return prices  # Already in base currency
+    return prices * exchange_rate
+
+def compare_portfolio_to_market(tickers: list, investments: list, start_date: str, end_date: str, market_index: str = '^GSPC', base_currency: str = 'USD'):
     """
-    Compare the portfolio's return with the market's return and plot the comparison.
+    Compare the portfolio's return with the market's return and plot the comparison with currency conversion.
 
     Parameters:
     tickers (list): List of stock tickers in the portfolio.
@@ -13,6 +33,7 @@ def compare_portfolio_to_market(tickers: list, investments : list, start_date:st
     start_date (str): Start date for historical data.
     end_date (str): End date for historical data.
     market_index (str): The market index to compare against (default is S&P 500, '^GSPC').
+    base_currency (str): The base currency for the portfolio (e.g., 'USD').
 
     Returns:
     None: The function plots the results and shows them.
@@ -26,13 +47,30 @@ def compare_portfolio_to_market(tickers: list, investments : list, start_date:st
     # Convert monetary investments to weights (percentages of total portfolio value)
     weights = np.array(investments) / total_investment
     
-    # Fetch adjusted closing prices for the tickers and the market index
-    stock_data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+    # Fetch adjusted closing prices for the tickers
+    stock_data = pd.DataFrame()
+    for ticker in tickers:
+        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+        currency = get_currency(ticker)
+        if currency != base_currency:
+            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date)
+            data = convert_to_base_currency(data, exchange_rate)
+        stock_data[ticker] = data
+    
+    # Fetch and convert market index data
     market_data = yf.download(market_index, start=start_date, end=end_date)['Adj Close']
+    market_currency = get_currency(market_index)
+    if market_currency != base_currency:
+        exchange_rate = get_exchange_rate(base_currency, market_currency, start_date, end_date)
+        market_data = convert_to_base_currency(market_data, exchange_rate)
+    
+    # Combine stock data and market data into one DataFrame and drop rows with missing data
+    stock_data['Market'] = market_data
+    combined_data = stock_data.dropna()
     
     # Calculate daily returns
-    stock_returns = stock_data.pct_change().dropna()
-    market_returns = market_data.pct_change().dropna()
+    stock_returns = combined_data[tickers].pct_change().dropna()
+    market_returns = combined_data['Market'].pct_change().dropna()
     
     # Calculate portfolio daily returns as a weighted sum of individual stock returns
     portfolio_returns = stock_returns.dot(weights)
@@ -62,5 +100,3 @@ def compare_portfolio_to_market(tickers: list, investments : list, start_date:st
     plt.tick_params(axis='y', colors='white')
     
     plt.show()
-
- 

@@ -10,5 +10,5 @@ def test_compare_portfolio_to_market():
 
     # Here we're assuming the function is returning a float, but since it depends on
     # live market data, we just ensure it returns a number and not raise an error.
-    compare_portfolio_to_market(tickers, investments, start_date, end_date, market_index, )
+    compare_portfolio_to_market(tickers, investments, start_date, end_date, market_index, base_currency='EUR')
     print("Portfolio compared to market index: ",market_index)
