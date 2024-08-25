@@ -1,1 +1,1 @@
-from .metrics import beta
+from .metrics import calculate_beta

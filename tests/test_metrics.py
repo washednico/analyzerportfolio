@@ -1,5 +1,9 @@
-import pytest
+import os
+print(f"Running tests from: {os.path.abspath(__file__)}")
+
+
 from portfolioanalyzer.metrics import calculate_beta
+
 
 def test_calculate_portfolio_beta():
     tickers = ['AAPL', 'MSFT', 'GOOGL']
