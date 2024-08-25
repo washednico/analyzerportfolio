@@ -4,5 +4,8 @@
   "python.testing.pytestArgs": [
       "tests"
   ],
-  
+  "terminal.integrated.env.osx": {
+      "PYTHONPATH": "${workspaceFolder}"
+  },
+  "python.envFile": "${workspaceFolder}/.env"
 }

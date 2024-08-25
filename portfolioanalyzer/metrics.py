@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
+from scipy.stats import norm
 
 def calculate_beta_and_alpha(tickers: list, investments: list, start_date: str, end_date: str, market_index: str = "^GSPC", risk_free_rate: float = 0.01) -> tuple:
     """
@@ -147,4 +148,62 @@ def calculate_sortino_ratio(tickers: list, investments: list, start_date: str, e
     sortino_ratio = (average_portfolio_return - risk_free_rate) / downside_deviation
     
     return sortino_ratio
+
+
+def calculate_var(tickers: list, investments: list, start_date: str, end_date: str, confidence_level: float = 0.95, time_horizon: int = 1, method:str ='parametric') -> float:
+    """
+    Calculate the Value at Risk (VaR) of a portfolio using either the Parametric or Historical method.
+
+    Parameters:
+    tickers (list): List of stock tickers in the portfolio.
+    investments (list): List of monetary investments for each stock.
+    start_date (str): Start date for historical data.
+    end_date (str): End date for historical data.
+    confidence_level (float): Confidence level for VaR (default is 95%).
+    time_horizon (int): Time horizon in days for VaR calculation (default is 1 day).
+    method (str): Method to calculate VaR, either 'parametric' or 'historical' (default is 'parametric').
+
+    Returns:
+    float: The Value at Risk (VaR) of the portfolio in monetary terms.
+    """
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    # Calculate the total portfolio value
+    total_investment = sum(investments)
+    
+    # Convert monetary investments to weights (percentages of total portfolio value)
+    weights = np.array(investments) / total_investment
+    
+    # Fetch adjusted closing prices for the tickers
+    stock_data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+    
+    # Calculate daily returns
+    daily_returns = stock_data.pct_change().dropna()
+    
+    # Calculate portfolio daily returns as a weighted sum of individual stock returns
+    portfolio_returns = daily_returns.dot(weights)
+    
+    if method == 'parametric':
+        # Calculate the mean and standard deviation of portfolio returns
+        mean_return = portfolio_returns.mean()
+        std_dev = portfolio_returns.std()
+        
+        # Z-score for the given confidence level
+        z_score = norm.ppf(1 - confidence_level)
+        
+        # Calculate Parametric VaR scaled by sqrt(T)
+        var = (z_score * std_dev * np.sqrt(time_horizon)) * total_investment
+    
+    elif method == 'historical':
+        # Calculate rolling T-day returns
+        t_day_returns = portfolio_returns.rolling(window=time_horizon).apply(lambda x: np.prod(1 + x) - 1).dropna()
+        
+        # Calculate Historical VaR
+        var = np.percentile(t_day_returns, (1 - confidence_level) * 100) * total_investment
+    
+    else:
+        raise ValueError("Method must be either 'parametric' or 'historical'.")
+    
+    return abs(var)
 
