@@ -62,3 +62,5 @@ def compare_portfolio_to_market(tickers: list, investments : list, start_date:st
     plt.tick_params(axis='y', colors='white')
     
     plt.show()
+
+ 
