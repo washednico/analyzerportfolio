@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-def beta(tickers: list, weights: list, start_date: str, end_date: str, market_index: str = "^GSPC") -> float:
+def calculate_beta(tickers: list, weights: list, start_date: str, end_date: str, market_index: str = "^GSPC") -> float:
     """
     Calculate the beta of a portfolio relative to the market using yfinance data.
     
