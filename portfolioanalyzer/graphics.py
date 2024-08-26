@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from arch import arch_model
+from threading import Thread
 
 def compare_portfolio_to_market(data: pd.DataFrame, tickers: list, investments: list, market_index: str):
     """
@@ -130,6 +132,7 @@ def simulate_pac(data: pd.DataFrame, tickers: list, initial_investment: float, p
     }, index=dates)
     
     # Plotting the results with a black background
+    plt.ion()
     plt.figure(figsize=(14, 8))
     plt.plot(plot_data.index, plot_data['Portfolio Value'], label='Portfolio Value', color='orange', linewidth=2)
     plt.plot(plot_data.index, plot_data['Total Invested'], label='Total Invested', color='green', linewidth=2, linestyle='--')
@@ -191,3 +194,63 @@ def simulate_pac(data: pd.DataFrame, tickers: list, initial_investment: float, p
     
     plt.tight_layout()
     plt.show()
+
+
+
+def plot_garch_volatility(data: pd.DataFrame, tickers: list, investments: list):
+    """
+    Apply a GARCH model to the portfolio returns based on USD investments and plot the resulting volatility.
+
+    Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted prices for all tickers.
+    tickers (list): List of stock tickers in the portfolio.
+    investments (list): List of USD amounts invested in each stock.
+
+    Returns:
+    None: The function plots the volatility of the portfolio over time.
+    """
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    # Normalize investments to convert to an equivalent weight in portfolio
+    investments = np.array(investments)
+    
+    # Calculate the number of shares bought for each stock
+    shares = investments / data[tickers].iloc[0]
+
+    # Calculate the portfolio value at each time step
+    portfolio_values = (shares * data[tickers]).sum(axis=1)
+    
+    # Calculate daily returns of the portfolio
+    portfolio_returns = portfolio_values.pct_change().dropna()
+    
+    # Fit a GARCH(1,1) model to the portfolio returns
+    model = arch_model(portfolio_returns, vol='Garch', p=1, q=1)
+    model_fit = model.fit(disp="off")
+    
+    # Forecast the conditional volatility
+    forecasted_volatility = model_fit.conditional_volatility
+    
+    # Plotting the conditional volatility
+    
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(forecasted_volatility, color='orange', linewidth=2, label='GARCH Volatility')
+    
+    # Customizing the plot with a black background
+    plt.title('GARCH Volatility of Portfolio', color='white', fontsize=16)
+    plt.xlabel('Date', color='white')
+    plt.ylabel('Volatility', color='white')
+    plt.legend(facecolor='black', edgecolor='white', fontsize=12, loc='best', labelcolor='white')
+    plt.grid(True, color='gray', linestyle='--', linewidth=0.5)
+    
+    # Set background color
+    plt.gca().set_facecolor('black')
+    plt.gcf().set_facecolor('black')
+    
+    # Customize the tick colors
+    plt.tick_params(axis='x', colors='white')
+    plt.tick_params(axis='y', colors='white')
+    
+    plt.show()
+

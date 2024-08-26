@@ -1,5 +1,5 @@
 from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var
-from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac
+from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, plot_garch_volatility
 
 def test_everything():
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA']
@@ -26,7 +26,10 @@ def test_everything():
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
     
     compare_portfolio_to_market(data, ticker, investments, market_index)
+    plot_garch_volatility(data, ticker, investments)
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.2])
+    
+
 
 
 

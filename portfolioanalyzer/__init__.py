@@ -6,3 +6,4 @@ from .metrics import download_data
 
 from .graphics import compare_portfolio_to_market
 from .graphics import simulate_pac
+from .graphics import plot_garch_volatility

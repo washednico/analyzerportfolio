@@ -3,6 +3,7 @@ import numpy as np
 import yfinance as yf
 from scipy.stats import norm
 
+
 def get_currency(ticker):
     """Fetch the currency of the given ticker using yfinance."""
     ticker_info = yf.Ticker(ticker).info
@@ -271,7 +272,3 @@ def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confiden
     
     return abs(var)
 
-
-
-
-#would make sense to do a module to download the data only once and then pass the df to the functions.
