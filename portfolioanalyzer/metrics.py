@@ -32,36 +32,25 @@ def convert_to_base_currency(prices, exchange_rate):
         return prices  # Already in base currency
     return prices * exchange_rate
 
-def calculate_beta_and_alpha(tickers: list, investments: list, start_date: str, end_date: str, market_index: str = "^GSPC", risk_free_rate: float = 0.01, base_currency: str = 'USD') -> tuple:
+
+def download_data(tickers, market_index, start_date, end_date, base_currency):
     """
-    Calculate the beta and alpha of a portfolio using monetary investments with currency conversion.
+    Download stock and market data, convert to base currency, and return the processed data.
     
     Parameters:
-    tickers (list): List of stock tickers in the portfolio.
-    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    start_date (str): The start date for fetching historical data (e.g., '2020-01-01').
-    end_date (str): The end date for fetching historical data (e.g., '2021-01-01').
-    market_index (str): The market index to compare against (default is S&P 500, '^GSPC').
-    risk_free_rate (float): The risk-free rate to use in the alpha calculation (default is 1%).
+    tickers (list): List of stock tickers.
+    market_index (str): Market index ticker.
+    start_date (str): Start date for historical data.
+    end_date (str): End date for historical data.
     base_currency (str): The base currency for the portfolio (e.g., 'USD').
-    
-    Returns:
-    tuple: A tuple containing the beta and alpha of the portfolio.
-    """
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
-    
-    # Initialize a cache for exchange rates
-    exchange_rate_cache = {}
 
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
-    
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = [investment / total_investment for investment in investments]
-    
-    # Fetch adjusted closing prices for the tickers and the market index
+    Returns:
+    pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
+    """
+    exchange_rate_cache = {}
     stock_data = pd.DataFrame()
+    
+    # Fetch and process each stock's data
     for ticker in tickers:
         data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
         currency = get_currency(ticker)
@@ -70,21 +59,52 @@ def calculate_beta_and_alpha(tickers: list, investments: list, start_date: str, 
             data = convert_to_base_currency(data, exchange_rate)
         stock_data[ticker] = data
     
-    # Fetch and convert market index data
+    # Fetch and process market index data
     market_data = yf.download(market_index, start=start_date, end=end_date)['Adj Close']
     market_currency = get_currency(market_index)
     if market_currency != base_currency:
         exchange_rate = get_exchange_rate(base_currency, market_currency, start_date, end_date, exchange_rate_cache)
         market_data = convert_to_base_currency(market_data, exchange_rate)
     
-    # Combine all data into one DataFrame to ensure alignment
-    combined_data = stock_data.copy()
-    combined_data['Market'] = market_data
-    combined_data = combined_data.dropna()
+    # Add market data to stock data
+    stock_data[market_index] = market_data
     
+    # Drop rows with missing data to ensure alignment
+    stock_data = stock_data.dropna()
+    
+    return stock_data
+
+
+def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list, investments: list, market_index: str, risk_free_rate: float = 0.01) -> tuple:
+    """
+    Calculate the beta and alpha of a portfolio using monetary investments.
+
+    Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers and the market index.
+    tickers (list): List of stock tickers in the portfolio.
+    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
+    market_index (str): The market index to compare against (e.g., S&P 500).
+    risk_free_rate (float): The risk-free rate to use in the alpha calculation (default is 1%).
+
+    Returns:
+    tuple: A tuple containing the beta and alpha of the portfolio.
+    """
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+
+    # Calculate the total portfolio value
+    total_investment = sum(investments)
+    
+    # Convert monetary investments to weights (percentages of total portfolio value)
+    weights = np.array(investments) / total_investment
+    
+    # Ensure the market index is in the DataFrame
+    if market_index not in data.columns:
+        raise ValueError(f"Market index '{market_index}' not found in the provided data.")
+
     # Calculate daily returns
-    stock_returns = combined_data[tickers].pct_change().dropna()
-    market_returns = combined_data['Market'].pct_change().dropna()
+    stock_returns = data[tickers].pct_change().dropna()
+    market_returns = data[market_index].pct_change().dropna()
     
     # Calculate portfolio returns as a weighted sum of individual stock returns
     portfolio_returns = (stock_returns * weights).sum(axis=1)
@@ -102,17 +122,16 @@ def calculate_beta_and_alpha(tickers: list, investments: list, start_date: str, 
     return beta, alpha
 
 
-def calculate_sharpe_ratio(tickers: list, investments: list, start_date: str, end_date: str, risk_free_rate: float = 0.01, base_currency: str = 'USD') -> float:
+
+def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list, investments: list, risk_free_rate: float = 0.01) -> float:
     """
-    Calculate the Sharpe ratio of a portfolio using monetary investments with currency conversion.
+    Calculate the Sharpe ratio of a portfolio using monetary investments.
 
     Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
     tickers (list): List of stock tickers in the portfolio.
     investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    start_date (str): The start date for fetching historical data (e.g., '2020-01-01').
-    end_date (str): The end date for fetching historical data (e.g., '2021-01-01').
     risk_free_rate (float): The risk-free rate to use in the Sharpe ratio calculation (default is 1%).
-    base_currency (str): The base currency for the portfolio (e.g., 'USD').
 
     Returns:
     float: The Sharpe ratio of the portfolio.
@@ -120,30 +139,19 @@ def calculate_sharpe_ratio(tickers: list, investments: list, start_date: str, en
     if len(tickers) != len(investments):
         raise ValueError("The number of tickers must match the number of investments.")
     
-    # Initialize a cache for exchange rates
-    exchange_rate_cache = {}
-
     # Calculate the total portfolio value
     total_investment = sum(investments)
     
     # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = [investment / total_investment for investment in investments]
+    weights = np.array(investments) / total_investment
     
-    # Fetch adjusted closing prices for the tickers
-    stock_data = pd.DataFrame()
-    for ticker in tickers:
-        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
-        currency = get_currency(ticker)
-        if currency != base_currency:
-            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date,exchange_rate_cache)
-            data = convert_to_base_currency(data, exchange_rate)
-        stock_data[ticker] = data
-    
-    # Combine stock data into one DataFrame and drop rows with missing data
-    stock_data = stock_data.dropna()
+    # Ensure all tickers are in the DataFrame
+    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
+    if missing_tickers:
+        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
     
     # Calculate daily returns
-    stock_returns = stock_data.pct_change().dropna()
+    stock_returns = data[tickers].pct_change().dropna()
     
     # Calculate portfolio returns as a weighted sum of individual stock returns
     portfolio_returns = (stock_returns * weights).sum(axis=1)
@@ -157,18 +165,18 @@ def calculate_sharpe_ratio(tickers: list, investments: list, start_date: str, en
     
     return sharpe_ratio
 
-def calculate_sortino_ratio(tickers: list, investments: list, start_date: str, end_date: str, target_return: float = 0.0, risk_free_rate: float = 0.01, base_currency: str = 'USD') -> float:
+
+
+def calculate_sortino_ratio(data: pd.DataFrame, tickers: list, investments: list, target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
     """
-    Calculate the Sortino ratio of a portfolio using monetary investments with currency conversion.
+    Calculate the Sortino ratio of a portfolio using monetary investments.
 
     Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
     tickers (list): List of stock tickers in the portfolio.
     investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    start_date (str): The start date for fetching historical data (e.g., '2020-01-01').
-    end_date (str): The end date for fetching historical data (e.g., '2021-01-01').
     target_return (float): The minimum acceptable return (MAR), often set to 0 or the risk-free rate.
     risk_free_rate (float): The risk-free rate to use in the Sortino ratio calculation (default is 1%).
-    base_currency (str): The base currency for the portfolio (e.g., 'USD').
 
     Returns:
     float: The Sortino ratio of the portfolio.
@@ -176,30 +184,19 @@ def calculate_sortino_ratio(tickers: list, investments: list, start_date: str, e
     if len(tickers) != len(investments):
         raise ValueError("The number of tickers must match the number of investments.")
     
-    # Initialize a cache for exchange rates
-    exchange_rate_cache = {}
-    
     # Calculate the total portfolio value
     total_investment = sum(investments)
     
     # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = [investment / total_investment for investment in investments]
+    weights = np.array(investments) / total_investment
     
-    # Fetch adjusted closing prices for the tickers
-    stock_data = pd.DataFrame()
-    for ticker in tickers:
-        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
-        currency = get_currency(ticker)
-        if currency != base_currency:
-            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
-            data = convert_to_base_currency(data, exchange_rate)
-        stock_data[ticker] = data
-    
-    # Combine stock data into one DataFrame and drop rows with missing data
-    stock_data = stock_data.dropna()
+    # Ensure all tickers are in the DataFrame
+    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
+    if missing_tickers:
+        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
     
     # Calculate daily returns
-    stock_returns = stock_data.pct_change().dropna()
+    stock_returns = data[tickers].pct_change().dropna()
     
     # Calculate portfolio returns as a weighted sum of individual stock returns
     portfolio_returns = (stock_returns * weights).sum(axis=1)
@@ -216,19 +213,17 @@ def calculate_sortino_ratio(tickers: list, investments: list, start_date: str, e
     return sortino_ratio
 
 
-def calculate_var(tickers: list, investments: list, start_date: str, end_date: str, confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric', base_currency: str = 'USD') -> float:
+def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric') -> float:
     """
-    Calculate the Value at Risk (VaR) of a portfolio using either the Parametric or Historical method with currency conversion.
+    Calculate the Value at Risk (VaR) of a portfolio using either the Parametric or Historical method.
 
     Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
     tickers (list): List of stock tickers in the portfolio.
     investments (list): List of monetary investments for each stock.
-    start_date (str): Start date for historical data.
-    end_date (str): End date for historical data.
     confidence_level (float): Confidence level for VaR (default is 95%).
     time_horizon (int): Time horizon in days for VaR calculation (default is 1 day).
     method (str): Method to calculate VaR, either 'parametric' or 'historical' (default is 'parametric').
-    base_currency (str): The base currency for the portfolio (e.g., 'USD').
 
     Returns:
     float: The Value at Risk (VaR) of the portfolio in monetary terms.
@@ -236,30 +231,19 @@ def calculate_var(tickers: list, investments: list, start_date: str, end_date: s
     if len(tickers) != len(investments):
         raise ValueError("The number of tickers must match the number of investments.")
     
-    # Initialize a cache for exchange rates
-    exchange_rate_cache = {}
-    
     # Calculate the total portfolio value
     total_investment = sum(investments)
     
     # Convert monetary investments to weights (percentages of total portfolio value)
     weights = np.array(investments) / total_investment
     
-    # Fetch adjusted closing prices for the tickers
-    stock_data = pd.DataFrame()
-    for ticker in tickers:
-        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
-        currency = get_currency(ticker)
-        if currency != base_currency:
-            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
-            data = convert_to_base_currency(data, exchange_rate)
-        stock_data[ticker] = data
-    
-    # Combine stock data into one DataFrame and drop rows with missing data
-    stock_data = stock_data.dropna()
+    # Ensure all tickers are in the DataFrame
+    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
+    if missing_tickers:
+        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
     
     # Calculate daily returns
-    daily_returns = stock_data.pct_change().dropna()
+    daily_returns = data[tickers].pct_change().dropna()
     
     # Calculate portfolio daily returns as a weighted sum of individual stock returns
     portfolio_returns = daily_returns.dot(weights)
@@ -286,6 +270,7 @@ def calculate_var(tickers: list, investments: list, start_date: str, end_date: s
         raise ValueError("Method must be either 'parametric' or 'historical'.")
     
     return abs(var)
+
 
 
 
