@@ -5,3 +5,4 @@ from .metrics import calculate_var
 from .metrics import download_data
 
 from .graphics import compare_portfolio_to_market
+from .graphics import simulate_pac
