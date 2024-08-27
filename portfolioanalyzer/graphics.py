@@ -252,3 +252,8 @@ def plot_garch_volatility(data: pd.DataFrame, tickers: list, investments: list):
     
     plt.show()
 
+
+
+#DA AGGIUNGERE:
+#CONO VOLATILITA' PORTFOLIO
+#RIVEDERE ARCH/GARCH
