@@ -252,6 +252,123 @@ def plot_garch_volatility(data: pd.DataFrame, tickers: list, investments: list):
     
     plt.show()
 
+def plot_montecarlo(
+    price_df: pd.DataFrame,
+    tickers: list[str],
+    investments: list[float],
+    simulation_length: int,
+    num_portfolio_simulations: int = 100,
+    num_market_simulations: int = 0,
+    market_ticker: str = '^GSPC'
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    
+    """
+    Perform a Monte Carlo simulation for a portfolio and optionally for a market index.
+
+    Parameters:
+    price_df (pd.DataFrame): DataFrame containing adjusted daily prices for the portfolio assets and market.
+    tickers (list[str]): List of stock tickers in the portfolio.
+    investments (list[float]): Corresponding investment amounts for each ticker.
+    simulation_length (int): The length of each simulation (in days).
+    num_portfolio_simulations (int): Number of simulations to run for the portfolio (default is 100).
+    num_market_simulations (int): Number of simulations to run for the market index (default is 0, meaning no market simulations).
+    market_ticker (str): Ticker symbol for the market index (default is '^GSPC').
+
+    Returns:
+    tuple[pd.DataFrame, pd.DataFrame]: A tuple containing two DataFrames: one for the portfolio simulation and one for the market simulation.
+    """
+    
+    def calculate_daily_returns(price_df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate the daily returns from adjusted prices."""
+        return price_df.pct_change().dropna()
+
+    def run_monte_carlo(returns_df: pd.DataFrame, weights: list[float], num_simulations: int, simulation_length: int, initial_value: float) -> pd.DataFrame:
+        """Run Monte Carlo simulations."""
+        simulation_results = np.zeros((simulation_length, num_simulations))
+        
+        for ticker, weight in zip(returns_df.columns, weights):
+            mean_return = returns_df[ticker].mean()
+            std_dev_return = returns_df[ticker].std()
+            
+            for sim in range(num_simulations):
+                simulated_prices = [initial_value]  # Start with the initial investment value
+                for _ in range(simulation_length):
+                    simulated_price = simulated_prices[-1] * (1 + np.random.normal(mean_return, std_dev_return))
+                    simulated_prices.append(simulated_price)
+                
+                simulation_results[:, sim] += weight * np.array(simulated_prices[1:])
+        
+        return pd.DataFrame(simulation_results)
+    
+    # Calculate daily returns for the portfolio
+    returns_df = calculate_daily_returns(price_df[tickers])
+    total_investment = sum(investments)
+    portfolio_weights = np.array(investments) / total_investment
+
+    # Run simulations for the portfolio
+    portfolio_sim_df = run_monte_carlo(returns_df, portfolio_weights, num_portfolio_simulations, simulation_length, initial_value=total_investment)
+    
+    # Initialize market simulation DataFrame as None
+    market_sim_df = pd.DataFrame()
+    
+    # If market simulations are requested, calculate and run those as well
+    if num_market_simulations > 0 and market_ticker in price_df.columns:
+        market_returns_df = calculate_daily_returns(price_df[[market_ticker]])
+        market_sim_df = run_monte_carlo(market_returns_df, [1], num_market_simulations, simulation_length, initial_value=total_investment)
+    
+    # Create subplots for the portfolio and market simulations
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12), sharex=True)
+    
+    # Plot portfolio simulations
+    ax1.plot(portfolio_sim_df, color='orange', alpha=0.5)  # Increase alpha for better visibility
+    ax1.set_title('Monte Carlo Simulation of Portfolio', color='white', fontsize=18)
+    ax1.set_ylabel('Portfolio Value', color='white', fontsize=14)
+    ax1.set_facecolor('black')
+    ax1.grid(True, color='gray', linestyle='--', linewidth=0.5)
+    ax1.tick_params(axis='x', colors='white')
+    ax1.tick_params(axis='y', colors='white')
+    
+    # Plot market simulations
+    if not market_sim_df.empty:
+        ax2.plot(market_sim_df, color='green', alpha=0.5)  # Increase alpha for better visibility
+        ax2.set_title('Monte Carlo Simulation of Market', color='white', fontsize=18)
+        ax2.set_xlabel('Day', color='white', fontsize=14)
+        ax2.set_ylabel('Market Value', color='white', fontsize=14)
+        ax2.set_facecolor('black')
+        ax2.grid(True, color='gray', linestyle='--', linewidth=0.5)
+        ax2.tick_params(axis='x', colors='white')
+        ax2.tick_params(axis='y', colors='white')
+    
+    # Calculate and display statistics on the plot for the portfolio
+    portfolio_end_values = portfolio_sim_df.iloc[-1]
+    portfolio_stats = {
+        'Max': portfolio_end_values.max(),
+        'Min': portfolio_end_values.min(),
+        'Median': portfolio_end_values.median(),
+        'Mean': portfolio_end_values.mean()
+    }
+    stats_text = '\n'.join([f'{key}: {value:.2f}' for key, value in portfolio_stats.items()])
+    ax1.text(0.05, 0.95, stats_text, transform=ax1.transAxes, fontsize=12,
+             verticalalignment='top', bbox=dict(facecolor='black', edgecolor='orange', boxstyle='round,pad=0.5'),
+             color='orange')
+    
+    # Calculate and display statistics on the plot for the market
+    if not market_sim_df.empty:
+        market_end_values = market_sim_df.iloc[-1]
+        market_stats = {
+            'Max': market_end_values.max(),
+            'Min': market_end_values.min(),
+            'Median': market_end_values.median(),
+            'Mean': market_end_values.mean()
+        }
+        stats_text = '\n'.join([f'{key}: {value:.2f}' for key, value in market_stats.items()])
+        ax2.text(0.05, 0.95, stats_text, transform=ax2.transAxes, fontsize=12,
+                 verticalalignment='top', bbox=dict(facecolor='black', edgecolor='green', boxstyle='round,pad=0.5'),
+                 color='green')
+    
+    plt.show()
+
+    return portfolio_sim_df, market_sim_df
 
 
 #DA AGGIUNGERE:
