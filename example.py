@@ -1,11 +1,9 @@
 import yfinance as yf
 
-msft = yf.Ticker("MSFT").info
+msft = yf.Ticker("E").info
 
 # get all stock info
 
 
 # show analysts data
-print(msft["targetMeanPrice"])
-print(msft["targetLowPrice"])
-print(msft["targetHighPrice"])
+print(msft)

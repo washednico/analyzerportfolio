@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import logging
 
 def get_currency(ticker):
     """Fetch the currency of the given ticker using yfinance."""
@@ -30,28 +31,53 @@ def convert_to_base_currency(prices, exchange_rate):
         return prices  # Already in base currency
     return prices * exchange_rate
 
-def get_analyst_info(ticker):
+def get_stock_info(ticker):
     """Fetch stock info including target prices from yfinance."""
     stock_info = yf.Ticker(ticker).info
+    stock_data = yf.Ticker(ticker).info
     try:
-        return {
-            'currentPrice': stock_info['currentPrice'],
-            'targetLowPrice': stock_info['targetLowPrice'],
-            'targetMeanPrice': stock_info['targetMeanPrice'],
-            'targetHighPrice': stock_info['targetHighPrice'],
-            'targetMedianPrice': stock_info['targetMedianPrice'],
-            'currency': stock_info['currency']
-        }
+        stock_info['currentPrice'] = stock_data['currentPrice']
     except KeyError:
-        # If target prices are not available, assume the current price remains the same
-        return {
-            'currentPrice': stock_info['currentPrice'],
-            'targetLowPrice': stock_info['currentPrice'],
-            'targetMeanPrice': stock_info['currentPrice'],
-            'targetHighPrice': stock_info['currentPrice'],
-            'targetMedianPrice': stock_info['currentPrice'],
-            'currency': stock_info['currency']
-        }
+        logging.warning(f"Current price not found for {ticker}.")
+        stock_info['currentPrice'] = None
+
+    try:
+        stock_info['targetLowPrice'] = stock_data.get('targetLowPrice', stock_info['currentPrice'])
+    except KeyError:
+        logging.warning(f"Target low price not found for {ticker}.")
+        stock_info['targetLowPrice'] = stock_info['currentPrice']
+
+    try:
+        stock_info['targetMeanPrice'] = stock_data.get('targetMeanPrice', stock_info['currentPrice'])
+    except KeyError:
+        logging.warning(f"Target mean price not found for {ticker}.")
+        stock_info['targetMeanPrice'] = stock_info['currentPrice']
+
+    try:
+        stock_info['targetHighPrice'] = stock_data.get('targetHighPrice', stock_info['currentPrice'])
+    except KeyError:
+        logging.warning(f"Target high price not found for {ticker}.")
+        stock_info['targetHighPrice'] = stock_info['currentPrice']
+
+    try:
+        stock_info['targetMedianPrice'] = stock_data.get('targetMedianPrice', stock_info['currentPrice'])
+    except KeyError:
+        logging.warning(f"Target median price not found for {ticker}.")
+        stock_info['targetMedianPrice'] = stock_info['currentPrice']
+
+    try:
+        stock_info['dividendYield'] = stock_data.get('dividendYield', 0)  # Default to 0 if not available
+    except KeyError:
+        logging.warning(f"Dividend yield not found for {ticker}.")
+        stock_info['dividendYield'] = 0
+
+    try:
+        stock_info['currency'] = stock_data['currency']
+    except KeyError:
+        logging.warning(f"Currency not found for {ticker}. Defaulting to USD.")
+        stock_info['currency'] = 'USD'
+
+    return stock_info
 
 def get_current_rate(base_currency, quote_currency):
     """Fetch the exchange rate from quote_currency to base_currency."""

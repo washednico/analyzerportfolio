@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import yfinance as yf
-from portfolioanalyzer.utils import get_analyst_info, get_current_rate, get_currency, get_exchange_rate, convert_to_base_currency
+from portfolioanalyzer.utils import get_stock_info, get_current_rate, get_currency, get_exchange_rate, convert_to_base_currency
 
 def download_data(tickers, market_index, start_date, end_date, base_currency):
     """
@@ -261,7 +261,7 @@ def calculate_portfolio_scenarios(tickers, investments, base_currency='USD'):
     portfolio_value_high = 0
 
     for ticker, investment in zip(tickers, investments):
-        stock_info = get_analyst_info(ticker)
+        stock_info = get_stock_info(ticker)
         current_price = stock_info['currentPrice']
         target_low = stock_info['targetLowPrice']
         target_mean = stock_info['targetMeanPrice']
@@ -291,3 +291,32 @@ def calculate_portfolio_scenarios(tickers, investments, base_currency='USD'):
         'Median Scenario': portfolio_value_median,
         'High Scenario': portfolio_value_high
     }
+
+def calculate_dividend_yield(tickers, investments):
+    """
+    Calculate the overall dividend yield of the portfolio.
+
+    Parameters:
+    tickers (list): List of stock tickers.
+    investments (list): Corresponding investment amounts for each ticker.
+
+    Returns:
+    float: The overall dividend yield of the portfolio as a percentage.
+    """
+    total_investment = sum(investments)
+    weighted_dividend_yield = 0
+
+    for ticker, investment in zip(tickers, investments):
+        stock_info = get_stock_info(ticker)
+        dividend_yield = stock_info.get('dividendYield', 0)
+
+        if dividend_yield is None:
+            continue  # Skip this stock if dividend yield is not available
+
+        # Calculate the weight of this stock in the portfolio
+        weight = investment / total_investment
+
+        # Calculate the contribution to the overall dividend yield
+        weighted_dividend_yield += weight * dividend_yield
+
+    return weighted_dividend_yield

@@ -1,9 +1,9 @@
-from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios
+from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios, calculate_dividend_yield
 from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, plot_garch_volatility
 
 def test_everything():
-    ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA']
-    investments = [100,200,300,300,200]
+    ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
+    investments = [100,200,300,300,200,500]
     start_date = '2019-01-01'
     end_date = '2024-01-01'
     market_index = '^GSPC'
@@ -19,6 +19,7 @@ def test_everything():
     var = calculate_var(data, ticker, investments)
     var_5_h = calculate_var(data,ticker,investments,confidence_level=0.99,time_horizon=5,method='historical')
     analyst_info = calculate_portfolio_scenarios(ticker,investments,base_currency)
+    dividend_yield = calculate_dividend_yield(ticker, investments)
 
 
     print("Beta: ", beta)
@@ -28,6 +29,7 @@ def test_everything():
     print("Value at Risk: ", var)
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
     print("Analyst Info: ", analyst_info)
+    print("Dividend Yield: ", dividend_yield)
     
     compare_portfolio_to_market(data, ticker, investments, market_index)
     plot_garch_volatility(data, ticker, investments)
