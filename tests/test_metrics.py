@@ -33,10 +33,5 @@ def test_everything():
     
     compare_portfolio_to_market(data, ticker, investments, market_index)
     plot_garch_volatility(data, ticker, investments)
-    simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.2])
+    simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
     
-
-
-
-
-

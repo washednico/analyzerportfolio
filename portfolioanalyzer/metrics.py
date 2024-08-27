@@ -4,7 +4,8 @@ from scipy.stats import norm
 import yfinance as yf
 from portfolioanalyzer.utils import get_stock_info, get_current_rate, get_currency, get_exchange_rate, convert_to_base_currency
 
-def download_data(tickers, market_index, start_date, end_date, base_currency):
+
+def download_data(tickers: list, market_index: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
     """
     Download stock and market data, convert to base currency, and return the processed data.
     
@@ -44,7 +45,6 @@ def download_data(tickers, market_index, start_date, end_date, base_currency):
     stock_data = stock_data.dropna()
     
     return stock_data
-
 
 def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list, investments: list, market_index: str, risk_free_rate: float = 0.01) -> tuple:
     """
@@ -92,8 +92,6 @@ def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list, investments: lis
     
     return beta, alpha
 
-
-
 def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list, investments: list, risk_free_rate: float = 0.01) -> float:
     """
     Calculate the Sharpe ratio of a portfolio using monetary investments.
@@ -135,8 +133,6 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list, investments: list,
     sharpe_ratio = (average_portfolio_return - risk_free_rate) / portfolio_std_dev
     
     return sharpe_ratio
-
-
 
 def calculate_sortino_ratio(data: pd.DataFrame, tickers: list, investments: list, target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
     """
@@ -182,7 +178,6 @@ def calculate_sortino_ratio(data: pd.DataFrame, tickers: list, investments: list
     sortino_ratio = (average_portfolio_return - risk_free_rate) / downside_deviation
     
     return sortino_ratio
-
 
 def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric') -> float:
     """
@@ -242,8 +237,7 @@ def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confiden
     
     return abs(var)
 
-
-def calculate_portfolio_scenarios(tickers, investments, base_currency='USD'):
+def calculate_portfolio_scenarios(tickers: list, investments: list, base_currency: str ='USD') -> dict:
     """
     Calculate the portfolio value in different scenarios based on analyst target prices.
 
@@ -292,7 +286,7 @@ def calculate_portfolio_scenarios(tickers, investments, base_currency='USD'):
         'High Scenario': portfolio_value_high
     }
 
-def calculate_dividend_yield(tickers, investments):
+def calculate_dividend_yield(tickers: list, investments: list) -> float:
     """
     Calculate the overall dividend yield of the portfolio.
 
@@ -320,3 +314,4 @@ def calculate_dividend_yield(tickers, investments):
         weighted_dividend_yield += weight * dividend_yield
 
     return weighted_dividend_yield
+
