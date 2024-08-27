@@ -5,7 +5,7 @@ import yfinance as yf
 from portfolioanalyzer.utils import get_stock_info, get_current_rate, get_currency, get_exchange_rate, convert_to_base_currency
 
 
-def download_data(tickers: list, market_index: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
+def download_data(tickers: list[str], market_index: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
     """
     Download stock and market data, convert to base currency, and return the processed data.
     
@@ -46,7 +46,7 @@ def download_data(tickers: list, market_index: str, start_date: str, end_date: s
     
     return stock_data
 
-def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list, investments: list, market_index: str, risk_free_rate: float = 0.01) -> tuple:
+def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_index: str, risk_free_rate: float = 0.01) -> tuple:
     """
     Calculate the beta and alpha of a portfolio using monetary investments.
 
@@ -92,7 +92,7 @@ def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list, investments: lis
     
     return beta, alpha
 
-def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list, investments: list, risk_free_rate: float = 0.01) -> float:
+def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], risk_free_rate: float = 0.01) -> float:
     """
     Calculate the Sharpe ratio of a portfolio using monetary investments.
 
@@ -134,7 +134,7 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list, investments: list,
     
     return sharpe_ratio
 
-def calculate_sortino_ratio(data: pd.DataFrame, tickers: list, investments: list, target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
+def calculate_sortino_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
     """
     Calculate the Sortino ratio of a portfolio using monetary investments.
 
@@ -179,7 +179,7 @@ def calculate_sortino_ratio(data: pd.DataFrame, tickers: list, investments: list
     
     return sortino_ratio
 
-def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric') -> float:
+def calculate_var(data: pd.DataFrame, tickers: list[str], investments: list[float], confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric') -> float:
     """
     Calculate the Value at Risk (VaR) of a portfolio using either the Parametric or Historical method.
 
@@ -237,7 +237,7 @@ def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confiden
     
     return abs(var)
 
-def calculate_portfolio_scenarios(tickers: list, investments: list, base_currency: str ='USD') -> dict:
+def calculate_portfolio_scenarios(tickers: list[str], investments: list[float], base_currency: str ='USD') -> dict:
     """
     Calculate the portfolio value in different scenarios based on analyst target prices.
 
@@ -286,7 +286,7 @@ def calculate_portfolio_scenarios(tickers: list, investments: list, base_currenc
         'High Scenario': portfolio_value_high
     }
 
-def calculate_dividend_yield(tickers: list, investments: list) -> float:
+def calculate_dividend_yield(tickers: list[str], investments: list[float]) -> float:
     """
     Calculate the overall dividend yield of the portfolio.
 

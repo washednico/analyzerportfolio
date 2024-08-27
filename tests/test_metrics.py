@@ -1,5 +1,5 @@
 from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios, calculate_dividend_yield
-from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, garch, montecarlo
+from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, garch, montecarlo, heatmap
 
 def test_everything():
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
@@ -21,7 +21,6 @@ def test_everything():
     analyst_info = calculate_portfolio_scenarios(ticker,investments,base_currency)
     dividend_yield = calculate_dividend_yield(ticker, investments)
 
-
     print("Beta: ", beta)
     print("Alpha: ", alpha)
     print("Sharpe Ratio: ", sharpe_ratio)
@@ -30,12 +29,12 @@ def test_everything():
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
     print("Analyst Info: ", analyst_info)
     print("Dividend Yield: ", dividend_yield)
-    
+
     compare_portfolio_to_market(data, ticker, investments, market_index)
     garch(data, ticker, investments)
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
     montecarlo(data,ticker,investments,250,50,50,market_index)
-    
+    heatmap(data, ticker, market_index)
 
 
 

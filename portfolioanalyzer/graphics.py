@@ -2,10 +2,11 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
+import plotly.express as px
 import plotly.io as pio
 from arch import arch_model
 
-
+# Set plotly template
 pio.templates.default = "plotly_dark"
 
 def montecarlo(
@@ -107,7 +108,6 @@ def montecarlo(
         print(f"Average Value: {market_end_values.mean():.2f}")
 
     return portfolio_sim_df, market_sim_df
-
 
 def compare_portfolio_to_market(
     data: pd.DataFrame,
@@ -303,7 +303,6 @@ def simulate_pac(
 
     return plot_data
 
-
 def garch(
     data: pd.DataFrame,
     tickers: list[str],
@@ -368,3 +367,48 @@ def garch(
         fig.show()
 
     return forecasted_volatility
+
+def heatmap(
+        price_df: pd.DataFrame,
+        tickers: list[str],
+        market_ticker: str = '^GSPC',
+        plot: bool = True
+        ):
+    """
+    Plot a heatmap for correaltion analysis
+
+    Parameters: 
+    price_df (pd.DataFrame): DataFrame containing adjusted daily prices for the portfolio assets and market.
+    tickers (list[str]): List of stock tickers in the portfolio.
+    market_ticker (str): Ticker symbol for the market index (default is '^GSPC').
+    plot (bool): Whether to plot the results (default is True).
+
+    Returns:
+    pd.DataFrame: A DataFrame with the correlation coefficients. 
+    """
+    # Ensure the market index is in the DataFrame
+    if market_ticker not in price_df.columns:
+        raise ValueError(f"Market index '{market_ticker}' not found in the provided data.")
+
+    def calculate_daily_returns(price_df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate the daily returns from adjusted prices."""
+        return price_df.pct_change().dropna()
+    
+    # Calculate daily returns
+    stock_returns = calculate_daily_returns(price_df[tickers])
+    market_returns = calculate_daily_returns(price_df[market_ticker])
+    
+    # Combine stock and market returns into a single DataFrame
+    combined_returns = pd.concat([stock_returns, market_returns], axis=1)
+
+    # Calculate the correlation matrix
+    corr_matrix = combined_returns.corr()
+    print(type(corr_matrix))
+
+    if plot:
+        # Plot the clustermap using px 
+        fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
+        fig.update_layout(height=800, width=1000, title_text="Heatmap of Stocks and Market")
+        fig.show()
+
+    return corr_matrix
