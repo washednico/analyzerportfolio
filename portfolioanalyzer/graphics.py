@@ -403,7 +403,6 @@ def heatmap(
 
     # Calculate the correlation matrix
     corr_matrix = combined_returns.corr()
-    print(type(corr_matrix))
 
     if plot:
         # Plot the clustermap using px 

@@ -315,3 +315,43 @@ def calculate_dividend_yield(tickers: list[str], investments: list[float]) -> fl
 
     return weighted_dividend_yield
 
+def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: list[float]) -> float:
+    """
+    Calcualte maxdrawdawn of the portfolio
+
+    Parameters: 
+    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
+    tickers (list): List of stock tickers.
+    investments (list): Corresponding investment amounts for each ticker.
+
+    Returns:
+    float: The overall maxdrawdown of the portfolio as a percentage.
+    """ 
+
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    # Calculate the total portfolio value
+    total_investment = sum(investments)
+    
+    # Convert monetary investments to weights (percentages of total portfolio value)
+    weights = np.array(investments) / total_investment
+    
+    # Ensure all tickers are in the DataFrame
+    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
+    if missing_tickers:
+        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
+    
+    # Calculate daily returns
+    stock_returns = data[tickers].pct_change().dropna()
+    
+    # Calculate portfolio returns as a weighted sum of individual stock returns
+    portfolio_returns = (stock_returns * weights).sum(axis=1)
+    
+    cumulative_portfolio_returns = (1 + portfolio_returns).cumprod()
+    cumulative_portfolio_returns_max = cumulative_portfolio_returns.cummax()
+
+    drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
+    max_drawdown = min(drawdown[1:])
+
+    return max_drawdown

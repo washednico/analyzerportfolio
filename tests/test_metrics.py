@@ -1,4 +1,4 @@
-from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios, calculate_dividend_yield
+from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios, calculate_dividend_yield, calculate_max_drawdown
 from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, garch, montecarlo, heatmap
 
 def test_everything():
@@ -20,6 +20,7 @@ def test_everything():
     var_5_h = calculate_var(data,ticker,investments,confidence_level=0.99,time_horizon=5,method='historical')
     analyst_info = calculate_portfolio_scenarios(ticker,investments,base_currency)
     dividend_yield = calculate_dividend_yield(ticker, investments)
+    max_drawdown = calculate_max_drawdown(data, ticker, investments)
 
     print("Beta: ", beta)
     print("Alpha: ", alpha)
@@ -29,7 +30,8 @@ def test_everything():
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
     print("Analyst Info: ", analyst_info)
     print("Dividend Yield: ", dividend_yield)
-
+    print("Max Drawdown: ", max_drawdown)
+    
     compare_portfolio_to_market(data, ticker, investments, market_index)
     garch(data, ticker, investments)
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
