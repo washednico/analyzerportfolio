@@ -1,5 +1,5 @@
 from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios, calculate_dividend_yield
-from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, plot_garch_volatility, plot_montecarlo
+from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, garch, montecarlo
 
 def test_everything():
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
@@ -32,9 +32,9 @@ def test_everything():
     print("Dividend Yield: ", dividend_yield)
     
     compare_portfolio_to_market(data, ticker, investments, market_index)
-    plot_garch_volatility(data, ticker, investments)
+    garch(data, ticker, investments)
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
-    plot_montecarlo(data,ticker,investments,250,50,50,market_index)
+    montecarlo(data,ticker,investments,250,50,50,market_index)
     
 
 

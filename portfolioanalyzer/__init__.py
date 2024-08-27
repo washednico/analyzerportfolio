@@ -13,5 +13,5 @@ from .metrics import calculate_dividend_yield
 
 from .graphics import compare_portfolio_to_market
 from .graphics import simulate_pac
-from .graphics import plot_garch_volatility
-from .graphics import plot_montecarlo
+from .graphics import garch
+from .graphics import montecarlo
