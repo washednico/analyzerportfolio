@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from arch import arch_model
-from threading import Thread
 
 def compare_portfolio_to_market(data: pd.DataFrame, tickers: list, investments: list, market_index: str):
     """
@@ -132,7 +131,6 @@ def simulate_pac(data: pd.DataFrame, tickers: list, initial_investment: float, p
     }, index=dates)
     
     # Plotting the results with a black background
-    plt.ion()
     plt.figure(figsize=(14, 8))
     plt.plot(plot_data.index, plot_data['Portfolio Value'], label='Portfolio Value', color='orange', linewidth=2)
     plt.plot(plot_data.index, plot_data['Total Invested'], label='Total Invested', color='green', linewidth=2, linestyle='--')

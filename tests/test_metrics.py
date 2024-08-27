@@ -1,4 +1,4 @@
-from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var
+from portfolioanalyzer.metrics import calculate_beta_and_alpha, calculate_sharpe_ratio, calculate_sortino_ratio, download_data, calculate_var, calculate_portfolio_scenarios
 from portfolioanalyzer.graphics import compare_portfolio_to_market, simulate_pac, plot_garch_volatility
 
 def test_everything():
@@ -12,18 +12,22 @@ def test_everything():
     
     
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_index=market_index)
+    
     beta, alpha = calculate_beta_and_alpha(data, ticker, investments, market_index)
     sharpe_ratio = calculate_sharpe_ratio(data, ticker, investments, risk_free_rate)
     sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
     var = calculate_var(data, ticker, investments)
     var_5_h = calculate_var(data,ticker,investments,confidence_level=0.99,time_horizon=5,method='historical')
-    
+    analyst_info = calculate_portfolio_scenarios(ticker,investments,base_currency)
+
+
     print("Beta: ", beta)
     print("Alpha: ", alpha)
     print("Sharpe Ratio: ", sharpe_ratio)
     print("Sortino Ratio: ", sortino_ratio)
     print("Value at Risk: ", var)
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
+    print("Analyst Info: ", analyst_info)
     
     compare_portfolio_to_market(data, ticker, investments, market_index)
     plot_garch_volatility(data, ticker, investments)

@@ -1,38 +1,8 @@
 import pandas as pd
 import numpy as np
-import yfinance as yf
 from scipy.stats import norm
-
-
-def get_currency(ticker):
-    """Fetch the currency of the given ticker using yfinance."""
-    ticker_info = yf.Ticker(ticker).info
-    return ticker_info['currency']
-
-def get_exchange_rate(base_currency, quote_currency, start_date, end_date, exchange_rate_cache):
-    """Fetch the historical exchange rates from quote_currency to base_currency, using a cache to avoid redundant API calls."""
-    if base_currency == quote_currency:
-        return None  # No conversion needed
-
-    # Check if the exchange rate is already in the cache
-    cache_key = (quote_currency, base_currency)
-    if cache_key in exchange_rate_cache:
-        return exchange_rate_cache[cache_key]
-    
-    # Fetch the exchange rate if not cached
-    exchange_rate_ticker = f'{quote_currency}{base_currency}=X'
-    exchange_rate_data = yf.download(exchange_rate_ticker, start=start_date, end=end_date)['Adj Close']
-    
-    # Store the fetched exchange rate in the cache
-    exchange_rate_cache[cache_key] = exchange_rate_data
-    return exchange_rate_data
-
-def convert_to_base_currency(prices, exchange_rate):
-    """Convert prices to the base currency using the exchange rate."""
-    if exchange_rate is None:
-        return prices  # Already in base currency
-    return prices * exchange_rate
-
+import yfinance as yf
+from portfolioanalyzer.utils import get_analyst_info, get_current_rate, get_currency, get_exchange_rate, convert_to_base_currency
 
 def download_data(tickers, market_index, start_date, end_date, base_currency):
     """
@@ -272,3 +242,52 @@ def calculate_var(data: pd.DataFrame, tickers: list, investments: list, confiden
     
     return abs(var)
 
+
+def calculate_portfolio_scenarios(tickers, investments, base_currency='USD'):
+    """
+    Calculate the portfolio value in different scenarios based on analyst target prices.
+
+    Parameters:
+    tickers (list): List of stock tickers.
+    investments (list): Corresponding investment amounts for each ticker.
+    base_currency (str): The base currency for calculating portfolio value (default is 'USD').
+
+    Returns:
+    dict: Portfolio values in low, mean, median, and high scenarios.
+    """
+    portfolio_value_low = 0
+    portfolio_value_mean = 0
+    portfolio_value_median = 0
+    portfolio_value_high = 0
+
+    for ticker, investment in zip(tickers, investments):
+        stock_info = get_analyst_info(ticker)
+        current_price = stock_info['currentPrice']
+        target_low = stock_info['targetLowPrice']
+        target_mean = stock_info['targetMeanPrice']
+        target_median = stock_info['targetMedianPrice']
+        target_high = stock_info['targetHighPrice']
+        stock_currency = stock_info['currency']
+
+        # Convert prices to the base currency if necessary
+        exchange_rate = get_current_rate(base_currency, stock_currency)
+        target_low *= exchange_rate
+        target_mean *= exchange_rate
+        target_median *= exchange_rate
+        target_high *= exchange_rate
+
+        # Calculate the number of shares bought with the investment
+        shares = investment / (current_price * exchange_rate)
+
+        # Calculate portfolio value in each scenario
+        portfolio_value_low += shares * target_low
+        portfolio_value_mean += shares * target_mean
+        portfolio_value_median += shares * target_median
+        portfolio_value_high += shares * target_high
+
+    return {
+        'Low Scenario': portfolio_value_low,
+        'Mean Scenario': portfolio_value_mean,
+        'Median Scenario': portfolio_value_median,
+        'High Scenario': portfolio_value_high
+    }
