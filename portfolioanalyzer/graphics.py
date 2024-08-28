@@ -5,6 +5,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
 from arch import arch_model
+from portfolioanalyzer.metrics import calculate_daily_returns
 
 # Set plotly template
 pio.templates.default = "plotly_dark"
@@ -436,6 +437,74 @@ def heatmap(
 
     return corr_matrix
 
+# TODO: update function description
+def drawdown_plot(
+        data: pd.DataFrame, 
+        tickers: list[str], 
+        investments: list[float], 
+        plot: bool = True) -> pd.Dataframe:
+    
+    """
+    Plot drawdown of the portfolio
+
+    Parameters: 
+    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
+    tickers (list): List of stock tickers.
+    investments (list): Corresponding investment amounts for each ticker.
+
+    Returns:
+    float: The overall maxdrawdown of the portfolio as a percentage.
+    """ 
+
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    # Calculate the total portfolio value
+    total_investment = sum(investments)
+    
+    # Convert monetary investments to weights (percentages of total portfolio value)
+    weights = np.array(investments) / total_investment
+    
+    # Ensure all tickers are in the DataFrame
+    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
+    if missing_tickers:
+        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
+    
+    # Calculate daily returns
+    stock_returns = calculate_daily_returns(data[tickers])
+    
+    # Calculate portfolio returns as a weighted sum of individual stock returns
+    portfolio_returns = (stock_returns * weights).sum(axis=1)
+    
+    cumulative_portfolio_returns = (1 + portfolio_returns).cumprod()
+    cumulative_portfolio_returns_max = cumulative_portfolio_returns.cummax()
+
+    drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
+
+    if plot:
+        fig = go.Figure()
+
+        # Drawdown trace
+        fig.add_trace(go.Scatter(
+            x=drawdown.index,
+            y=drawdown,
+            mode='lines',
+            name='Drawdown',
+            line=dict(color='orange', width=2)
+        ))
+
+        # Update layout
+        fig.update_layout(
+            title="Drawdown",
+            xaxis_title="Date",
+            yaxis_title="Value ($)",
+            template="plotly_dark",
+            height=600
+        )
+
+        fig.show()
+
+    return drawdown
 
 def volatility_cone(
     data: pd.DataFrame,

@@ -2,8 +2,14 @@ import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import yfinance as yf
-from portfolioanalyzer.utils import get_stock_info, get_current_rate, get_currency, get_exchange_rate, convert_to_base_currency
 
+from portfolioanalyzer.utils import (
+    get_stock_info, 
+    get_current_rate, 
+    get_currency, 
+    get_exchange_rate, 
+    convert_to_base_currency
+)
 
 def download_data(tickers: list[str], market_index: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
     """
@@ -45,6 +51,21 @@ def download_data(tickers: list[str], market_index: str, start_date: str, end_da
     stock_data = stock_data.dropna()
     
     return stock_data
+
+# TODO: complete function 
+def calculate_portfolio_weights():
+    return None
+
+def calculate_rolling_average_returns():
+    return None
+
+
+###########
+def calculate_daily_returns(stock_df:pd.DataFrame) -> pd.DataFrame:
+    """Calculate the daily returns from adjusted prices."""
+    if not pd.api.types.is_datetime64_any_dtype(stock_df.index):
+        raise ValueError("Index must be of datetime type")
+    return stock_df.pct_change().dropna()
 
 def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_index: str, risk_free_rate: float = 0.01) -> tuple:
     """
