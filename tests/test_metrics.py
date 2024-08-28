@@ -19,19 +19,23 @@ from portfolioanalyzer.graphics import (
     drawdown_plot
 )
 
+from portfolioanalyzer.optimization import (
+    markowitz_optimization
+)
+
 def test_everything():
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
     investments = [100,200,300,300,200,500]
     start_date = '2019-01-01'
     end_date = '2024-01-01'
-    market_index = '^GSPC'
+    market_ticker = '^GSPC'
     risk_free_rate = 0.01
     base_currency = 'EUR'
     
     
-    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_index=market_index)
+    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
     
-    beta, alpha = calculate_beta_and_alpha(data, ticker, investments, market_index)
+    beta, alpha = calculate_beta_and_alpha(data, ticker, investments, market_ticker)
     sharpe_ratio = calculate_sharpe_ratio(data, ticker, investments, risk_free_rate)
     sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
     var = calculate_var(data, ticker, investments)
@@ -50,14 +54,19 @@ def test_everything():
     print("Dividend Yield: ", dividend_yield)
     print("Max Drawdown: ", max_drawdown)
     
-    compare_portfolio_to_market(data, ticker, investments, market_index)
+    compare_portfolio_to_market(data, ticker, investments, market_ticker)
     garch(data, ticker, investments)
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
-    montecarlo(data,ticker,investments,250,50,50,market_index)
-    heatmap(data, ticker, market_index)
+    montecarlo(data,ticker,investments,250,50,50,market_ticker)
+    heatmap(data, ticker, market_ticker)
     volatility_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments)
     
+    optimal_portfolio = markowitz_optimization(data, ticker, investments, method = 'variance')
+    print("\n   | Markowitz Optimal Portfolio |   ")
+    print("Optimal Weights:", optimal_portfolio)
+    # print('Expected Return: ' % (optimized_return * 100))
+    # print('Risk (Volatility): ' % optimized_vol)
 
 
 

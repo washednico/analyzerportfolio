@@ -388,7 +388,7 @@ def garch(
     return forecasted_volatility
 
 def heatmap(
-        price_df: pd.DataFrame,
+        data: pd.DataFrame,
         tickers: list[str],
         market_ticker: str = '^GSPC',
         plot: bool = True
@@ -405,11 +405,11 @@ def heatmap(
     Returns:
     pd.DataFrame: A DataFrame with the correlation coefficients. 
     """
-    if check_dataframe(price_df, tickers, market_ticker):
+    if check_dataframe(data, tickers, market_ticker = market_ticker):
     
         # Calculate daily returns
-        stock_returns = calculate_daily_returns(price_df[tickers])
-        market_returns = calculate_daily_returns(price_df[market_ticker])
+        stock_returns = calculate_daily_returns(data[tickers])
+        market_returns = calculate_daily_returns(data[market_ticker])
         
         # Combine stock and market returns into a single DataFrame
         combined_returns = pd.concat([stock_returns, market_returns], axis=1)

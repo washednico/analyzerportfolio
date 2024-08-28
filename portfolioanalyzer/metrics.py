@@ -74,17 +74,17 @@ def calculate_portfolio_returns(investments:list[float], stock_returns:pd.DataFr
 
     return portfolio_returns.dropna()
 
-def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float] = False, market_ticker:str = False) -> bool:
+def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float] = None, market_ticker:str = None) -> bool:
     """
     Check if necessary variables exist in the provided data
     """
     #Ensure there is a position in all tickers
-    if investments:
+    if investments is not None:
         if len(tickers) != len(investments):
             raise ValueError("The number of tickers must match the number of investments.")
-    
+
     # Ensure the market index is in the DataFrame (OPTIONAL)
-    if market_ticker:
+    if market_ticker is not None:
         if market_ticker not in data.columns:
             raise ValueError(f"Market index '{market_ticker}' not found in the provided data.")
     
@@ -142,7 +142,7 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: 
     Returns:
     float: The Sharpe ratio of the portfolio.
     """
-    if check_dataframe(data, tickers, investments, market_ticker=False):
+    if check_dataframe(data, tickers, investments):
 
         # Calculate daily returns
         stock_returns = calculate_daily_returns(data[tickers]) 
@@ -337,7 +337,7 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
     float: The overall maxdrawdown of the portfolio as a percentage.
     """ 
 
-    if check_dataframe(data, tickers, investments, market_ticker=False):
+    if check_dataframe(data, tickers, investments, market_ticker=None):
 
         # Calculate portfolio returns as a weighted sum of individual stock returns
         stock_returns = calculate_daily_returns(data[tickers]) 
