@@ -9,7 +9,7 @@ from portfolioanalyzer.metrics import (
     check_dataframe
 )
 
-def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: list[float], num_ports: int = 100, plot: bool = True, method = 'sharpe'):
+def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: list[float], rf_rate:float = 0.0, plot: bool = True, method = 'sharpe'):
     """
     Perform Markowitz optimization to find the minimum variance portfolio and plot the efficient frontier.
 
@@ -17,31 +17,48 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
     data (pd.DataFrame): DataFrame containing historical price data for assets and the market index.
     tickers (list[str]): List of asset tickers in the portfolio.
     investments (list[float]): List of monetary investments for each asset.
-    num_ports (int): Number of portfolios to generate for the efficient frontier. Default is 100.
+    rf_rate (float): Indicating risk free rate (defaul is 0.0).
+    plot (bool): Whether to plot the results (default is True).
+
 
     Returns:
-    tuple: Minimum variance portfolio weights, expected return, and optimal_vol.
+    dict: Dictionary containg portfolio metrics based on optimal weights
 
     -
     All weights, of course, must be between 0 and 1. Thus we set 0 and 1 as the boundaries. 
     The second boundary is the sum of weights = 1.
+    
+    Sequential Least Squares Programming (SLSQP) Algorithm
+    - https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html
 
-    •	A higher num_ports value would provide a more detailed and fine-grained efficient frontier, but it would require more computational resources and time to calculate.
-	•	A lower num_ports value would be faster to compute but might result in a less detailed curve.
+    -
 
     NOTE: we are minimizing the negative of sharpe ratio since maximise function is not supported by scipy
     """
+
     def portfolio_performance(weights, mean_returns, cov_matrix):
+        """
+        Calculate portfolio metrics.
+        """
         returns =  np.matmul(mean_returns.T, weights) *252
+
         variance = np.dot(weights.T, np.dot(cov_matrix, weights))
         vol = np.sqrt(variance) * np.sqrt(252)
-        sharpe = returns/vol
+
+        sharpe = returns-rf_rate/vol
+
+        downside_deviation = np.sqrt(np.mean(np.minimum(0, returns - rf_rate) ** 2))
+        sortino_ratio = (returns - rf_rate) / downside_deviation
 
         return {
             'return': returns, 
             'volatility': vol, 
-            'sharpe': sharpe
+            'sharpe': sharpe,
+            'sortino':sortino_ratio
                 }
+    
+    def minimize_sortino(weights):
+        return -portfolio_performance(weights, mean_returns, covar_matrix)['sortino'] 
     
     def minimize_sharpe(weights):  
         return -portfolio_performance(weights, mean_returns, covar_matrix)['sharpe'] 
@@ -100,6 +117,9 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
             return optimize_portfolio(minimize_volatility, initializer, bounds, constraints, tickers, mean_returns, covar_matrix)
         elif method == 'return':
             return optimize_portfolio(minimize_return, initializer, bounds, constraints, tickers, mean_returns, covar_matrix)
+        elif method == 'sortino':
+            return optimize_portfolio(minimize_sortino, initializer, bounds, constraints, tickers, mean_returns, covar_matrix)
+
        
        
     #TODO: efficient frontier plot 

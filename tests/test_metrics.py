@@ -62,11 +62,13 @@ def test_everything():
     volatility_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments)
     
-    optimal_portfolio = markowitz_optimization(data, ticker, investments, method = 'variance')
+    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')
     print("\n   | Markowitz Optimal Portfolio |   ")
-    print("Optimal Weights:", optimal_portfolio)
-    # print('Expected Return: ' % (optimized_return * 100))
-    # print('Risk (Volatility): ' % optimized_vol)
+    print("Optimal Weights:", markowitz_portfolio)
+
+    # optimal_portfolio = portfolio_optimization(data, ticker, investments)
+    # print("\n   | Optimal Portfolio |   ")
+    # print("Optimal Weights:", optimal_portfolio)
 
 
 
