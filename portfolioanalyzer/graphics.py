@@ -222,6 +222,7 @@ def simulate_pac(
     
     # Normalize weights to ensure they sum to 1
     weights = np.array(investment_weights)
+    #weights are normalized so they sum to 1.
     weights = weights / weights.sum()
     
     # Initialize variables
@@ -268,6 +269,16 @@ def simulate_pac(
         'Total Invested': total_invested
     }, index=dates)
     
+    # Calculate final values for summary
+    final_portfolio_value = round(portfolio_values[-1],2)
+    final_total_invested = total_invested[-1]
+    profit = round((final_portfolio_value - final_total_invested),2)
+    profit_percentage = round(((profit / final_total_invested) * 100),2)
+    
+    # Summary string for annotation
+    summary = "Total Invested: "+str(final_total_invested)+"    Final portfolio value: "+str(final_portfolio_value)+"     Percentage Increase: "+str(profit_percentage)+"%"
+    
+    
     if plot:
         # Plotting the results with Plotly
         fig = go.Figure()
@@ -290,13 +301,26 @@ def simulate_pac(
             line=dict(color='green', width=2, dash='dash')
         ))
 
-        # Update layout
+        # Update layout and add annotation
         fig.update_layout(
             title="Portfolio Growth with PAC Strategy",
             xaxis_title="Date",
             yaxis_title="Value ($)",
             template="plotly_dark",
-            height=600
+            height=600,
+            annotations=[
+                go.layout.Annotation(
+                    text=summary,
+                    xref="paper", yref="paper",
+                    x=1.05, y=1.05, showarrow=False,
+                    font=dict(color="orange", size=12),
+                    align="left",
+                    bordercolor="white",
+                    borderwidth=1,
+                    borderpad=4,
+                    bgcolor="rgba(0, 0, 0, 0.75)"
+                )
+            ]
         )
 
         fig.show()
@@ -411,3 +435,110 @@ def heatmap(
         fig.show()
 
     return corr_matrix
+
+
+def volatility_cone(
+    data: pd.DataFrame,
+    tickers: list[str],
+    investments: list[float],
+    time_horizon: int,
+    confidence_intervals: list[float] = [0.90, 0.95, 0.99],
+    plot: bool = True
+) -> pd.DataFrame:
+    """
+    Calculate and plot the probability cone for a portfolio over a time horizon.
+
+    Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted prices for all tickers.
+    tickers (list[str]): List of stock tickers in the portfolio.
+    investments (list[float]): List of USD amounts invested in each stock.
+    time_horizon (int): The number of days over which to calculate the probability cone.
+    confidence_intervals (list[float]): List of confidence intervals to use for the cone (default is [0.90, 0.95, 0.99]).
+    plot (bool): Whether to plot the probability cone (default is True).
+
+    Returns:
+    pd.DataFrame: A DataFrame containing the expected value and the upper and lower bounds for each confidence interval.
+    """
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    # Normalize investments to convert to an equivalent weight in the portfolio
+    investments = np.array(investments)
+    
+    # Calculate the number of shares bought for each stock
+    shares = investments / data[tickers].iloc[0]
+
+    # Calculate the portfolio value at each time step
+    portfolio_values = (shares * data[tickers]).sum(axis=1)
+    
+    # Calculate daily returns of the portfolio
+    portfolio_returns = portfolio_values.pct_change().dropna()
+
+    # Calculate the mean return and volatility of the portfolio
+    mean_return = portfolio_returns.mean()
+    volatility = portfolio_returns.std()
+
+    # Generate a range of time steps (days)
+    time_steps = np.arange(1, time_horizon + 1)
+    
+    # Calculate the expected value over time
+    initial_value = portfolio_values.iloc[0]
+    expected_value = initial_value * np.exp(mean_return * time_steps)
+    
+    # Prepare data for the confidence intervals
+    probability_cone_data = {'Days': time_steps, 'Expected Value': expected_value}
+    
+    for ci in confidence_intervals:
+        z_score = np.abs(np.log(1 - (1 - ci) / 2))  # Z-score for the given confidence interval
+        lower_bound = initial_value * np.exp((mean_return - z_score * volatility) * time_steps)
+        upper_bound = initial_value * np.exp((mean_return + z_score * volatility) * time_steps)
+        
+        probability_cone_data[f'Lower Bound {int(ci*100)}%'] = lower_bound
+        probability_cone_data[f'Upper Bound {int(ci*100)}%'] = upper_bound
+    
+    # Convert to DataFrame
+    probability_cone_df = pd.DataFrame(probability_cone_data)
+
+    if plot:
+        # Plotting the probability cone with Plotly
+        fig = go.Figure()
+
+        # Plot expected value
+        fig.add_trace(go.Scatter(
+            x=probability_cone_df['Days'],
+            y=probability_cone_df['Expected Value'],
+            mode='lines',
+            name='Expected Value',
+            line=dict(color='orange')
+        ))
+
+        # Plot confidence intervals
+        for ci in confidence_intervals:
+            fig.add_trace(go.Scatter(
+                x=probability_cone_df['Days'],
+                y=probability_cone_df[f'Lower Bound {int(ci*100)}%'],
+                mode='lines',
+                name=f'Lower Bound {int(ci*100)}%',
+                line=dict(color='red', dash='dash')
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=probability_cone_df['Days'],
+                y=probability_cone_df[f'Upper Bound {int(ci*100)}%'],
+                mode='lines',
+                name=f'Upper Bound {int(ci*100)}%',
+                line=dict(color='green', dash='dash')
+            ))
+
+        # Update layout
+        fig.update_layout(
+            title="Probability Cone",
+            xaxis_title="Days",
+            yaxis_title="Portfolio Value",
+            template="plotly_dark",
+            height=600
+        )
+
+        fig.show()
+
+    return probability_cone_df

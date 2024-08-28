@@ -10,8 +10,11 @@ from .metrics import calculate_var
 from .metrics import download_data
 from .metrics import calculate_portfolio_scenarios
 from .metrics import calculate_dividend_yield
+from .metrics import calculate_max_drawdown
 
 from .graphics import compare_portfolio_to_market
 from .graphics import simulate_pac
 from .graphics import garch
 from .graphics import montecarlo
+from .graphics import heatmap
+from .graphics import volatility_cone
