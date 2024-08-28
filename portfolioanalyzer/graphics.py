@@ -7,6 +7,7 @@ import plotly.io as pio
 from arch import arch_model
 from portfolioanalyzer.metrics import (
     calculate_daily_returns,
+    calculate_portfolio_returns,
     check_dataframe
 )
 
@@ -40,10 +41,6 @@ def montecarlo(
     tuple[pd.DataFrame, pd.DataFrame]: A tuple containing two DataFrames: one for the portfolio simulation and one for the market simulation.
     """
     
-    def calculate_daily_returns(price_df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate the daily returns from adjusted prices."""
-        return price_df.pct_change().dropna()
-
     def run_monte_carlo(returns_df: pd.DataFrame, weights: list[float], num_simulations: int, simulation_length: int, initial_value: float) -> pd.DataFrame:
         """Run Monte Carlo simulations."""
         simulation_results = np.zeros((simulation_length, num_simulations))
@@ -62,56 +59,57 @@ def montecarlo(
         
         return pd.DataFrame(simulation_results)
     
-    # Calculate daily returns for the portfolio
-    returns_df = calculate_daily_returns(price_df[tickers])
-    total_investment = sum(investments)
-    portfolio_weights = np.array(investments) / total_investment
+    if check_dataframe(price_df, tickers, investments, market_ticker):
+        # Calculate daily returns for the portfolio
+        returns_df = calculate_daily_returns(price_df[tickers])
+        total_investment = sum(investments)
+        portfolio_weights = np.array(investments) / total_investment
 
-    # Run simulations for the portfolio
-    portfolio_sim_df = run_monte_carlo(returns_df, portfolio_weights, num_portfolio_simulations, simulation_length, initial_value=total_investment)
+        # Run simulations for the portfolio
+        portfolio_sim_df = run_monte_carlo(returns_df, portfolio_weights, num_portfolio_simulations, simulation_length, initial_value=total_investment)
+        
+        # Initialize market simulation DataFrame as None
+        market_sim_df = pd.DataFrame()
     
-    # Initialize market simulation DataFrame as None
-    market_sim_df = pd.DataFrame()
-    
-    # If market simulations are requested, calculate and run those as well
-    if num_market_simulations > 0 and market_ticker in price_df.columns:
-        market_returns_df = calculate_daily_returns(price_df[[market_ticker]])
-        market_sim_df = run_monte_carlo(market_returns_df, [1], num_market_simulations, simulation_length, initial_value=total_investment)
-    
-    if plot:
-        # Create subplots for the portfolio and market simulations
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=('Portfolio Simulations', 'Market Simulations'))
+        # If market simulations are requested, calculate and run those as well
+        if num_market_simulations > 0 and market_ticker in price_df.columns:
+            market_returns_df = calculate_daily_returns(price_df[[market_ticker]])
+            market_sim_df = run_monte_carlo(market_returns_df, [1], num_market_simulations, simulation_length, initial_value=total_investment)
+        
+        if plot:
+            # Create subplots for the portfolio and market simulations
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=('Portfolio Simulations', 'Market Simulations'))
 
-        # Plot portfolio simulations
-        for i in range(num_portfolio_simulations):
-            fig.add_trace(go.Scatter(x=list(range(simulation_length)), y=portfolio_sim_df[i], mode='lines', line=dict(color='orange', width=1), showlegend=False), row=1, col=1)
+            # Plot portfolio simulations
+            for i in range(num_portfolio_simulations):
+                fig.add_trace(go.Scatter(x=list(range(simulation_length)), y=portfolio_sim_df[i], mode='lines', line=dict(color='orange', width=1), showlegend=False), row=1, col=1)
 
-        # Plot market simulations
+            # Plot market simulations
+            if not market_sim_df.empty:
+                for i in range(num_market_simulations):
+                    fig.add_trace(go.Scatter(x=list(range(simulation_length)), y=market_sim_df[i], mode='lines', line=dict(color='green', width=1), showlegend=False), row=2, col=1)
+
+            fig.update_layout(height=800, width=1000, title_text="Monte Carlo Simulation of Portfolio and Market")
+            fig.show()
+
+        # Calculate and return statistics for portfolio
+        portfolio_end_values = portfolio_sim_df.iloc[-1]
+        print("Portfolio Simulation Statistics:")
+        print(f"Max Value: {portfolio_end_values.max():.2f}")
+        print(f"Min Value: {portfolio_end_values.min():.2f}")
+        print(f"Median Value: {portfolio_end_values.median():.2f}")
+        print(f"Average Value: {portfolio_end_values.mean():.2f}")
+        
+        # Calculate and return statistics for market
         if not market_sim_df.empty:
-            for i in range(num_market_simulations):
-                fig.add_trace(go.Scatter(x=list(range(simulation_length)), y=market_sim_df[i], mode='lines', line=dict(color='green', width=1), showlegend=False), row=2, col=1)
+            market_end_values = market_sim_df.iloc[-1]
+            print("\nMarket Simulation Statistics:")
+            print(f"Max Value: {market_end_values.max():.2f}")
+            print(f"Min Value: {market_end_values.min():.2f}")
+            print(f"Median Value: {market_end_values.median():.2f}")
+            print(f"Average Value: {market_end_values.mean():.2f}")
 
-        fig.update_layout(height=800, width=1000, title_text="Monte Carlo Simulation of Portfolio and Market")
-        fig.show()
-
-    # Calculate and return statistics for portfolio
-    portfolio_end_values = portfolio_sim_df.iloc[-1]
-    print("Portfolio Simulation Statistics:")
-    print(f"Max Value: {portfolio_end_values.max():.2f}")
-    print(f"Min Value: {portfolio_end_values.min():.2f}")
-    print(f"Median Value: {portfolio_end_values.median():.2f}")
-    print(f"Average Value: {portfolio_end_values.mean():.2f}")
-    
-    # Calculate and return statistics for market
-    if not market_sim_df.empty:
-        market_end_values = market_sim_df.iloc[-1]
-        print("\nMarket Simulation Statistics:")
-        print(f"Max Value: {market_end_values.max():.2f}")
-        print(f"Min Value: {market_end_values.min():.2f}")
-        print(f"Median Value: {market_end_values.median():.2f}")
-        print(f"Average Value: {market_end_values.mean():.2f}")
-
-    return portfolio_sim_df, market_sim_df
+        return portfolio_sim_df, market_sim_df
 
 def compare_portfolio_to_market(
     data: pd.DataFrame,
@@ -134,68 +132,61 @@ def compare_portfolio_to_market(
     pd.DataFrame: A DataFrame with the cumulative returns of both the portfolio and the market index.
     """
     
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
+    if check_dataframe(data, tickers, investments, market_index):
+        # Calculate the total portfolio value
+        total_investment = sum(investments)
     
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
+        #Calculate market and stocks daily returns
+        market_returns = calculate_daily_returns(data[market_index])
+        stock_returns = calculate_daily_returns(data[tickers])
+
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
     
-    # Ensure all tickers and market index are in the DataFrame
-    missing_columns = [ticker for ticker in tickers + [market_index] if ticker not in data.columns]
-    if missing_columns:
-        raise ValueError(f"Columns {missing_columns} not found in the provided data.")
-    
-    # Calculate daily returns
-    stock_returns = data[tickers].pct_change().dropna()
-    market_returns = data[market_index].pct_change().dropna()
-    
-    # Calculate portfolio daily returns as a weighted sum of individual stock returns
-    portfolio_returns = stock_returns.dot(weights)
-    
-    # Calculate cumulative returns
-    portfolio_cumulative_return = (1 + portfolio_returns).cumprod() * total_investment
-    market_cumulative_return = (1 + market_returns).cumprod() * total_investment
-    
-    # Combine results into a DataFrame for easier analysis
-    comparison_df = pd.DataFrame({
-        'Portfolio': portfolio_cumulative_return,
-        f'{market_index}': market_cumulative_return
-    })
+        # Calculate cumulative returns
+        portfolio_cumulative_return = (1 + portfolio_returns).cumprod() * total_investment
+        market_cumulative_return = (1 + market_returns).cumprod() * total_investment
+        
+        # Combine results into a DataFrame for easier analysis
+        comparison_df = pd.DataFrame({
+            'Portfolio': portfolio_cumulative_return,
+            f'{market_index}': market_cumulative_return
+        })
 
-    if plot:
-        # Plot the cumulative returns
-        fig = go.Figure()
+        if plot:
+            # Plot the cumulative returns
+            fig = go.Figure()
 
-        # Plot portfolio cumulative returns
-        fig.add_trace(go.Scatter(
-            x=portfolio_cumulative_return.index,
-            y=portfolio_cumulative_return,
-            mode='lines',
-            name='Portfolio',
-            line=dict(color='orange')
-        ))
+            # Plot portfolio cumulative returns
+            fig.add_trace(go.Scatter(
+                x=portfolio_cumulative_return.index,
+                y=portfolio_cumulative_return,
+                mode='lines',
+                name='Portfolio',
+                line=dict(color='orange')
+            ))
 
-        # Plot market cumulative returns
-        fig.add_trace(go.Scatter(
-            x=market_cumulative_return.index,
-            y=market_cumulative_return,
-            mode='lines',
-            name=f'{market_index}',
-            line=dict(color='green')
-        ))
+            # Plot market cumulative returns
+            fig.add_trace(go.Scatter(
+                x=market_cumulative_return.index,
+                y=market_cumulative_return,
+                mode='lines',
+                name=f'{market_index}',
+                line=dict(color='green')
+            ))
 
-        # Update layout
-        fig.update_layout(
-            title="Portfolio vs Market Performance",
-            xaxis_title="Date",
-            yaxis_title="Value",
-            template="plotly_dark",
-            height=600
-        )
+            # Update layout
+            fig.update_layout(
+                title="Portfolio vs Market Performance",
+                xaxis_title="Date",
+                yaxis_title="Value",
+                template="plotly_dark",
+                height=600
+            )
 
-        fig.show()
+            fig.show()
 
-    return comparison_df
+        return comparison_df
 
 def simulate_pac(
     data: pd.DataFrame,
@@ -414,33 +405,26 @@ def heatmap(
     Returns:
     pd.DataFrame: A DataFrame with the correlation coefficients. 
     """
-    # Ensure the market index is in the DataFrame
-    if market_ticker not in price_df.columns:
-        raise ValueError(f"Market index '{market_ticker}' not found in the provided data.")
-
-    def calculate_daily_returns(price_df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate the daily returns from adjusted prices."""
-        return price_df.pct_change().dropna()
+    if check_dataframe(price_df, tickers, market_ticker):
     
-    # Calculate daily returns
-    stock_returns = calculate_daily_returns(price_df[tickers])
-    market_returns = calculate_daily_returns(price_df[market_ticker])
-    
-    # Combine stock and market returns into a single DataFrame
-    combined_returns = pd.concat([stock_returns, market_returns], axis=1)
+        # Calculate daily returns
+        stock_returns = calculate_daily_returns(price_df[tickers])
+        market_returns = calculate_daily_returns(price_df[market_ticker])
+        
+        # Combine stock and market returns into a single DataFrame
+        combined_returns = pd.concat([stock_returns, market_returns], axis=1)
 
-    # Calculate the correlation matrix
-    corr_matrix = combined_returns.corr()
+        # Calculate the correlation matrix
+        corr_matrix = combined_returns.corr()
 
-    if plot:
-        # Plot the clustermap using px 
-        fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
-        fig.update_layout(height=800, width=1000, title_text="Heatmap of Stocks and Market")
-        fig.show()
+        if plot:
+            # Plot the clustermap using px 
+            fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
+            fig.update_layout(height=800, width=1000, title_text="Heatmap of Stocks and Market")
+            fig.show()
 
-    return corr_matrix
+        return corr_matrix
 
-# TODO: update function description
 def drawdown_plot(
         data: pd.DataFrame, 
         tickers: list[str], 
@@ -456,58 +440,43 @@ def drawdown_plot(
     investments (list): Corresponding investment amounts for each ticker.
 
     Returns:
-    float: The overall maxdrawdown of the portfolio as a percentage.
+    pd.DataFrame: The drawdown of the portfolio as a percentage.
     """ 
 
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
-    
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
-    
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if missing_tickers:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    # Calculate daily returns
-    stock_returns = calculate_daily_returns(data[tickers])
-    
-    # Calculate portfolio returns as a weighted sum of individual stock returns
-    portfolio_returns = (stock_returns * weights).sum(axis=1)
-    
-    cumulative_portfolio_returns = (1 + portfolio_returns).cumprod()
-    cumulative_portfolio_returns_max = cumulative_portfolio_returns.cummax()
 
-    drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
+    if check_dataframe(data, tickers, investments):
 
-    if plot:
-        fig = go.Figure()
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        stock_returns = calculate_daily_returns(data[tickers])
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+    
+        cumulative_portfolio_returns = (1 + portfolio_returns).cumprod()
+        cumulative_portfolio_returns_max = cumulative_portfolio_returns.cummax()
 
-        # Drawdown trace
-        fig.add_trace(go.Scatter(
-            x=drawdown.index,
-            y=drawdown,
-            mode='lines',
-            name='Drawdown',
-            line=dict(color='orange', width=2)
-        ))
+        drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
 
-        # Update layout
-        fig.update_layout(
-            title="Drawdown",
-            xaxis_title="Date",
-            yaxis_title="Value ($)",
-            template="plotly_dark",
-            height=600
-        )
+        if plot:
+            fig = go.Figure()
 
-        fig.show()
+            fig.add_trace(go.Scatter(
+                x=drawdown.index,
+                y=drawdown,
+                mode='lines',
+                name='Drawdown',
+                line=dict(color='orange', width=2)
+            ))
 
-    return drawdown
+            fig.update_layout(
+                title="Drawdown",
+                xaxis_title="Date",
+                yaxis_title="Value ($)",
+                template="plotly_dark",
+                height=600
+            )
+
+            fig.show()
+
+        return drawdown
 
 def volatility_cone(
     data: pd.DataFrame,

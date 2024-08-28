@@ -11,13 +11,13 @@ from portfolioanalyzer.utils import (
     convert_to_base_currency
 )
 
-def download_data(tickers: list[str], market_index: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
+def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
     """
     Download stock and market data, convert to base currency, and return the processed data.
     
     Parameters:
     tickers (list): List of stock tickers.
-    market_index (str): Market index ticker.
+    market_ticker (str): Market index ticker.
     start_date (str): Start date for historical data.
     end_date (str): End date for historical data.
     base_currency (str): The base currency for the portfolio (e.g., 'USD').
@@ -38,14 +38,14 @@ def download_data(tickers: list[str], market_index: str, start_date: str, end_da
         stock_data[ticker] = data
     
     # Fetch and process market index data
-    market_data = yf.download(market_index, start=start_date, end=end_date)['Adj Close']
-    market_currency = get_currency(market_index)
+    market_data = yf.download(market_ticker, start=start_date, end=end_date)['Adj Close']
+    market_currency = get_currency(market_ticker)
     if market_currency != base_currency:
         exchange_rate = get_exchange_rate(base_currency, market_currency, start_date, end_date, exchange_rate_cache)
         market_data = convert_to_base_currency(market_data, exchange_rate)
     
     # Add market data to stock data
-    stock_data[market_index] = market_data
+    stock_data[market_ticker] = market_data
     
     # Drop rows with missing data to ensure alignment
     stock_data = stock_data.dropna()
@@ -74,18 +74,19 @@ def calculate_portfolio_returns(investments:list[float], stock_returns:pd.DataFr
 
     return portfolio_returns.dropna()
 
-def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float], market_index:str = False) -> bool:
+def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float] = False, market_ticker:str = False) -> bool:
     """
     Check if necessary variables exist in the provided data
     """
     #Ensure there is a position in all tickers
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
+    if investments:
+        if len(tickers) != len(investments):
+            raise ValueError("The number of tickers must match the number of investments.")
     
     # Ensure the market index is in the DataFrame (OPTIONAL)
-    if market_index:
-        if market_index not in data.columns:
-            raise ValueError(f"Market index '{market_index}' not found in the provided data.")
+    if market_ticker:
+        if market_ticker not in data.columns:
+            raise ValueError(f"Market index '{market_ticker}' not found in the provided data.")
     
     # Ensure all tickers are in the DataFrame
     missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
@@ -94,7 +95,7 @@ def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[flo
     
     return True
 
-def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_index: str, risk_free_rate: float = 0.01) -> tuple:
+def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_ticker: str, risk_free_rate: float = 0.01) -> tuple:
     """
     Calculate the beta and alpha of a portfolio using monetary investments.
 
@@ -102,17 +103,17 @@ def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments
     data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers and the market index.
     tickers (list): List of stock tickers in the portfolio.
     investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    market_index (str): The market index to compare against (e.g., S&P 500).
+    market_ticker (str): The market index to compare against (e.g., S&P 500).
     risk_free_rate (float): The risk-free rate to use in the alpha calculation (default is 1%).
 
     Returns:
     tuple: A tuple containing the beta and alpha of the portfolio.
     """
 
-    if check_dataframe(data, tickers, investments, market_index):
+    if check_dataframe(data, tickers, investments, market_ticker):
 
         #Calculate market and stocks daily returns
-        market_returns = data[market_index].pct_change().dropna()
+        market_returns = calculate_daily_returns(data[market_ticker])
         stock_returns = calculate_daily_returns(data[tickers])
 
         # Calculate portfolio returns as a weighted sum of individual stock returns
@@ -141,7 +142,7 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: 
     Returns:
     float: The Sharpe ratio of the portfolio.
     """
-    if check_dataframe(data, tickers, investments, market_index=False):
+    if check_dataframe(data, tickers, investments, market_ticker=False):
 
         # Calculate daily returns
         stock_returns = calculate_daily_returns(data[tickers]) 
@@ -336,7 +337,7 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
     float: The overall maxdrawdown of the portfolio as a percentage.
     """ 
 
-    if check_dataframe(data, tickers, investments, market_index=False):
+    if check_dataframe(data, tickers, investments, market_ticker=False):
 
         # Calculate portfolio returns as a weighted sum of individual stock returns
         stock_returns = calculate_daily_returns(data[tickers]) 
