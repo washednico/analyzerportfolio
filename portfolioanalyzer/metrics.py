@@ -52,20 +52,47 @@ def download_data(tickers: list[str], market_index: str, start_date: str, end_da
     
     return stock_data
 
-# TODO: complete function 
-def calculate_portfolio_weights():
-    return None
-
-def calculate_rolling_average_returns():
-    return None
-
-
-###########
 def calculate_daily_returns(stock_df:pd.DataFrame) -> pd.DataFrame:
     """Calculate the daily returns from adjusted prices."""
     if not pd.api.types.is_datetime64_any_dtype(stock_df.index):
         raise ValueError("Index must be of datetime type")
     return stock_df.pct_change().dropna()
+
+def calculate_portfolio_returns(investments:list[float], stock_returns:pd.DataFrame) -> pd.Series:
+    """
+    Calculate portfolio returns as a weighted sum of individual stock returns.
+
+    Parameters:
+    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
+
+    Returns:
+    pd.Series: A pandas series containing portofolio returns. 
+    """
+    total_investment = sum(investments)
+    weights = np.array(investments) / total_investment
+    portfolio_returns = (stock_returns * weights).sum(axis=1)
+
+    return portfolio_returns.dropna()
+
+def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float], market_index:str = False) -> bool:
+    """
+    Check if necessary variables exist in the provided data
+    """
+    #Ensure there is a position in all tickers
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    # Ensure the market index is in the DataFrame (OPTIONAL)
+    if market_index:
+        if market_index not in data.columns:
+            raise ValueError(f"Market index '{market_index}' not found in the provided data.")
+    
+    # Ensure all tickers are in the DataFrame
+    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
+    if [ticker for ticker in tickers if ticker not in data.columns]:
+        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
+    
+    return True
 
 def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_index: str, risk_free_rate: float = 0.01) -> tuple:
     """
@@ -81,37 +108,25 @@ def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments
     Returns:
     tuple: A tuple containing the beta and alpha of the portfolio.
     """
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
 
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
-    
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
-    
-    # Ensure the market index is in the DataFrame
-    if market_index not in data.columns:
-        raise ValueError(f"Market index '{market_index}' not found in the provided data.")
+    if check_dataframe(data, tickers, investments, market_index):
 
-    # Calculate daily returns
-    stock_returns = data[tickers].pct_change().dropna()
-    market_returns = data[market_index].pct_change().dropna()
-    
-    # Calculate portfolio returns as a weighted sum of individual stock returns
-    portfolio_returns = (stock_returns * weights).sum(axis=1)
-    
-    # Calculate the cumulative returns over the period
-    cumulative_portfolio_return = (1 + portfolio_returns).prod() - 1
-    cumulative_market_return = (1 + market_returns).prod() - 1
-    
-    # Calculate the portfolio beta
-    beta = np.cov(portfolio_returns, market_returns)[0, 1] / np.var(market_returns)
-    
-    # Calculate alpha
-    alpha = (cumulative_portfolio_return - risk_free_rate) - beta * (cumulative_market_return - risk_free_rate)
-    
-    return beta, alpha
+        #Calculate market and stocks daily returns
+        market_returns = data[market_index].pct_change().dropna()
+        stock_returns = calculate_daily_returns(data[tickers])
+
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+
+        # Calculate the cumulative returns over the period
+        cumulative_portfolio_return = (1 + portfolio_returns).prod() - 1
+        cumulative_market_return = (1 + market_returns).prod() - 1
+        
+        # Calculate the portfolio Alpha and Beta
+        beta = np.cov(portfolio_returns, market_returns)[0, 1] / np.var(market_returns)
+        alpha = (cumulative_portfolio_return - risk_free_rate) - beta * (cumulative_market_return - risk_free_rate)
+        
+        return beta, alpha
 
 def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], risk_free_rate: float = 0.01) -> float:
     """
@@ -126,34 +141,22 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: 
     Returns:
     float: The Sharpe ratio of the portfolio.
     """
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
-    
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
-    
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if missing_tickers:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    # Calculate daily returns
-    stock_returns = data[tickers].pct_change().dropna()
-    
-    # Calculate portfolio returns as a weighted sum of individual stock returns
-    portfolio_returns = (stock_returns * weights).sum(axis=1)
-    
-    # Calculate average portfolio return and standard deviation
-    average_portfolio_return = portfolio_returns.mean()
-    portfolio_std_dev = portfolio_returns.std()
+    if check_dataframe(data, tickers, investments, market_index=False):
 
-    # Calculate Sharpe ratio
-    sharpe_ratio = (average_portfolio_return - risk_free_rate) / portfolio_std_dev
-    
-    return sharpe_ratio
+        # Calculate daily returns
+        stock_returns = calculate_daily_returns(data[tickers]) 
+
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+        
+        # Calculate average portfolio return and standard deviation
+        average_portfolio_return = portfolio_returns.mean()
+        portfolio_std_dev = portfolio_returns.std()
+
+        # Calculate Sharpe ratio
+        sharpe_ratio = (average_portfolio_return - risk_free_rate) / portfolio_std_dev
+        
+        return sharpe_ratio
 
 def calculate_sortino_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
     """
@@ -169,36 +172,22 @@ def calculate_sortino_ratio(data: pd.DataFrame, tickers: list[str], investments:
     Returns:
     float: The Sortino ratio of the portfolio.
     """
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
+    if check_dataframe(data, tickers, investments):
     
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        stock_returns = calculate_daily_returns(data[tickers]) 
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
     
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if missing_tickers:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    # Calculate daily returns
-    stock_returns = data[tickers].pct_change().dropna()
-    
-    # Calculate portfolio returns as a weighted sum of individual stock returns
-    portfolio_returns = (stock_returns * weights).sum(axis=1)
-    
-    # Calculate the average portfolio return
-    average_portfolio_return = portfolio_returns.mean()
-    
-    # Calculate downside deviation
-    downside_deviation = np.sqrt(np.mean(np.minimum(0, portfolio_returns - target_return) ** 2))
-    
-    # Calculate Sortino ratio
-    sortino_ratio = (average_portfolio_return - risk_free_rate) / downside_deviation
-    
-    return sortino_ratio
+        # Calculate the average portfolio return
+        average_portfolio_return = portfolio_returns.mean()
+        
+        # Calculate downside deviation
+        downside_deviation = np.sqrt(np.mean(np.minimum(0, portfolio_returns - target_return) ** 2))
+        
+        # Calculate Sortino ratio
+        sortino_ratio = (average_portfolio_return - risk_free_rate) / downside_deviation
+        
+        return sortino_ratio
 
 def calculate_var(data: pd.DataFrame, tickers: list[str], investments: list[float], confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric') -> float:
     """
@@ -215,48 +204,37 @@ def calculate_var(data: pd.DataFrame, tickers: list[str], investments: list[floa
     Returns:
     float: The Value at Risk (VaR) of the portfolio in monetary terms.
     """
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
-    
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
-    
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if missing_tickers:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    # Calculate daily returns
-    daily_returns = data[tickers].pct_change().dropna()
-    
-    # Calculate portfolio daily returns as a weighted sum of individual stock returns
-    portfolio_returns = daily_returns.dot(weights)
-    
-    if method == 'parametric':
-        # Calculate the mean and standard deviation of portfolio returns
-        mean_return = portfolio_returns.mean()
-        std_dev = portfolio_returns.std()
+    if check_dataframe(data, tickers, investments):
+
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        stock_returns = calculate_daily_returns(data[tickers]) 
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+
+        #Total monetary amount invested
+        total_investment = sum(investments)
+
+        if method == 'parametric':
+            # Calculate the mean and standard deviation of portfolio returns
+            mean_return = portfolio_returns.mean()
+            std_dev = portfolio_returns.std()
+            
+            # Z-score for the given confidence level
+            z_score = norm.ppf(1 - confidence_level)
+            
+            # Calculate Parametric VaR scaled by sqrt(T)
+            var = (z_score * std_dev * np.sqrt(time_horizon)) * total_investment
         
-        # Z-score for the given confidence level
-        z_score = norm.ppf(1 - confidence_level)
+        elif method == 'historical':
+            # Calculate rolling T-day returns
+            t_day_returns = portfolio_returns.rolling(window=time_horizon).apply(lambda x: np.prod(1 + x) - 1).dropna()
+            
+            # Calculate Historical VaR
+            var = np.percentile(t_day_returns, (1 - confidence_level) * 100) * total_investment
         
-        # Calculate Parametric VaR scaled by sqrt(T)
-        var = (z_score * std_dev * np.sqrt(time_horizon)) * total_investment
-    
-    elif method == 'historical':
-        # Calculate rolling T-day returns
-        t_day_returns = portfolio_returns.rolling(window=time_horizon).apply(lambda x: np.prod(1 + x) - 1).dropna()
+        else:
+            raise ValueError("Method must be either 'parametric' or 'historical'.")
         
-        # Calculate Historical VaR
-        var = np.percentile(t_day_returns, (1 - confidence_level) * 100) * total_investment
-    
-    else:
-        raise ValueError("Method must be either 'parametric' or 'historical'.")
-    
-    return abs(var)
+        return abs(var)
 
 def calculate_portfolio_scenarios(tickers: list[str], investments: list[float], base_currency: str ='USD') -> dict:
     """
@@ -275,6 +253,10 @@ def calculate_portfolio_scenarios(tickers: list[str], investments: list[float], 
     portfolio_value_median = 0
     portfolio_value_high = 0
 
+    #Ensure there is a position in all tickers
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
     for ticker, investment in zip(tickers, investments):
         stock_info = get_stock_info(ticker)
         current_price = stock_info['currentPrice']
@@ -318,6 +300,11 @@ def calculate_dividend_yield(tickers: list[str], investments: list[float]) -> fl
     Returns:
     float: The overall dividend yield of the portfolio as a percentage.
     """
+
+    #Ensure there is a position in all tickers
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
     total_investment = sum(investments)
     weighted_dividend_yield = 0
 
@@ -349,30 +336,16 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
     float: The overall maxdrawdown of the portfolio as a percentage.
     """ 
 
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
-    
-    # Calculate the total portfolio value
-    total_investment = sum(investments)
-    
-    # Convert monetary investments to weights (percentages of total portfolio value)
-    weights = np.array(investments) / total_investment
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if missing_tickers:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    # Calculate daily returns
-    stock_returns = data[tickers].pct_change().dropna()
-    
-    # Calculate portfolio returns as a weighted sum of individual stock returns
-    portfolio_returns = (stock_returns * weights).sum(axis=1)
-    
-    cumulative_portfolio_returns = (1 + portfolio_returns).cumprod()
-    cumulative_portfolio_returns_max = cumulative_portfolio_returns.cummax()
+    if check_dataframe(data, tickers, investments, market_index=False):
 
-    drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
-    max_drawdown = min(drawdown[1:])
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        stock_returns = calculate_daily_returns(data[tickers]) 
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+    
+        cumulative_portfolio_return = (1 + portfolio_returns).cumprod()
+        cumulative_portfolio_returns_max = cumulative_portfolio_return.cummax()
 
-    return max_drawdown
+        drawdown = (cumulative_portfolio_return - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
+        max_drawdown = min(drawdown[1:])
+
+        return max_drawdown

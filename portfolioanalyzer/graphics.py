@@ -5,7 +5,10 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
 from arch import arch_model
-from portfolioanalyzer.metrics import calculate_daily_returns
+from portfolioanalyzer.metrics import (
+    calculate_daily_returns,
+    check_dataframe
+)
 
 # Set plotly template
 pio.templates.default = "plotly_dark"
@@ -442,7 +445,7 @@ def drawdown_plot(
         data: pd.DataFrame, 
         tickers: list[str], 
         investments: list[float], 
-        plot: bool = True) -> pd.Dataframe:
+        plot: bool = True) -> pd.DataFrame:
     
     """
     Plot drawdown of the portfolio
