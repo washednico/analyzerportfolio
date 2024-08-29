@@ -350,3 +350,89 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
         max_drawdown = min(drawdown[1:])
 
         return max_drawdown
+
+
+def calculate_portfolio_metrics(
+    price_df: pd.DataFrame,
+    tickers: list[str],
+    investments: list[float], 
+    start_date_report: str = None,  # Optional parameter for calculating returns from a start date
+    investment_at_final_date: bool = True,  # Indicates if investments are based on the final date
+    market_ticker: str = '^GSPC',
+    risk_free_rate: float = 0.01
+) -> dict:
+    """
+    Calculate portfolio metrics and returns.
+
+    Parameters:
+    price_df (pd.DataFrame): A DataFrame containing the historical price data of the stocks in the portfolio.
+    tickers (list[str]): A list of stock tickers in the portfolio.
+    investments (list[float]): A list of investment amounts corresponding to each stock in the portfolio.
+    start_date_report (str, optional): The start date of the report to calculate returns in the format 'YYYY-MM-DD'.
+    investment_at_final_date (bool): Whether investments are based on the final date. If False, uses the start date.
+    market_ticker (str, optional): The ticker symbol of the market index to compare the portfolio against. Default is '^GSPC' (S&P 500).
+    risk_free_rate (float, optional): The risk-free rate used in calculating the Sharpe and Sortino ratios. Default is 0.01 (1%).
+
+    Returns:
+    dict: A dictionary containing the calculated metrics and other data.
+    """
+    # Determine the last available date in the price data
+    last_day = price_df.index[-1].strftime('%Y-%m-%d')
+    first_day = price_df.index[0].strftime('%Y-%m-%d')
+
+    # Use the start_date_report if provided; otherwise, use the first available date
+    start_date = start_date_report if start_date_report else first_day
+
+    # Calculate the number of shares for each stock
+    if investment_at_final_date:
+        shares = [investment / price_df[ticker].loc[last_day] for ticker, investment in zip(tickers, investments)]
+    else:
+        shares = [investment / price_df[ticker].loc[start_date] for ticker, investment in zip(tickers, investments)]
+
+    # Calculate portfolio values
+    portfolio_initial_value = sum(price_df[ticker].loc[start_date] * share for ticker, share in zip(tickers, shares))
+    portfolio_final_value = sum(price_df[ticker].loc[last_day] * share for ticker, share in zip(tickers, shares))
+
+    # Calculate market and portfolio returns from the start_date_report to the last available day
+    market_return = (price_df[market_ticker].loc[last_day] / price_df[market_ticker].loc[start_date] - 1) * 100
+    portfolio_return = (portfolio_final_value / portfolio_initial_value - 1) * 100
+
+    # Calculate portfolio metrics
+    beta, alpha = calculate_beta_and_alpha(price_df, tickers, investments, market_ticker)
+    sharpe_ratio = calculate_sharpe_ratio(price_df, tickers, investments, risk_free_rate)
+    sortino_ratio = calculate_sortino_ratio(price_df, tickers, investments, risk_free_rate)
+    var = calculate_var(price_df, tickers, investments)
+    max_drawdown = calculate_max_drawdown(price_df, tickers, investments)
+    dividend_yield = calculate_dividend_yield(tickers, investments)
+
+    # Calculate individual stock returns and monetary surplus/deficit
+    stock_details = []
+    for ticker, investment, share in zip(tickers, investments, shares):
+        initial_value = share * price_df[ticker].loc[start_date]
+        final_value = share * price_df[ticker].loc[last_day]
+        stock_return = (final_value / initial_value - 1) * 100
+        surplus_or_deficit = final_value - initial_value
+        stock_details.append({
+            "ticker": ticker,
+            "initial_value": initial_value,
+            "final_value": final_value,
+            "return": stock_return,
+            "surplus_or_deficit": surplus_or_deficit
+        })
+
+    return {
+        "last_day": last_day,
+        "first_metric_day": first_day,
+        "portfolio_initial_value": portfolio_initial_value,
+        "portfolio_final_value": portfolio_final_value,
+        "portfolio_return": portfolio_return,
+        "market_return": market_return,
+        "beta": beta,
+        "alpha": alpha,
+        "sharpe_ratio": sharpe_ratio,
+        "sortino_ratio": sortino_ratio,
+        "var": var,
+        "max_drawdown": max_drawdown,
+        "dividend_yield": dividend_yield,
+        "stock_details": stock_details
+    }

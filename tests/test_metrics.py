@@ -24,7 +24,8 @@ from portfolioanalyzer.optimization import (
 )
 
 from portfolioanalyzer.ai import (
-    newsletter_report
+    newsletter_report,
+    get_suggestion
 )
 
 def test_everything():
@@ -35,7 +36,7 @@ def test_everything():
     market_ticker = '^GSPC'
     risk_free_rate = 0.01
     base_currency = 'EUR'
-    
+    openai_key = ""
     
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
     
@@ -70,10 +71,13 @@ def test_everything():
     print("\n   | Markowitz Optimal Portfolio |   ")
     print("Optimal Weights:", markowitz_portfolio)
 
-    report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key="")
+    report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
     print(report)
 
+    suggestion = get_suggestion(data, ticker, investments, openai_key)
+    print(suggestion)
 
+    
     # optimal_portfolio = portfolio_optimization(data, ticker, investments)
     # print("\n   | Optimal Portfolio |   ")
     # print("Optimal Weights:", optimal_portfolio)
