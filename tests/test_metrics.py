@@ -23,11 +23,15 @@ from portfolioanalyzer.optimization import (
     markowitz_optimization
 )
 
+from portfolioanalyzer.ai import (
+    newsletter_report
+)
+
 def test_everything():
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
     investments = [100,200,300,300,200,500]
     start_date = '2019-01-01'
-    end_date = '2024-01-01'
+    end_date = '2024-08-28'
     market_ticker = '^GSPC'
     risk_free_rate = 0.01
     base_currency = 'EUR'
@@ -65,6 +69,10 @@ def test_everything():
     markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')
     print("\n   | Markowitz Optimal Portfolio |   ")
     print("Optimal Weights:", markowitz_portfolio)
+
+    report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key="")
+    print(report)
+
 
     # optimal_portfolio = portfolio_optimization(data, ticker, investments)
     # print("\n   | Optimal Portfolio |   ")

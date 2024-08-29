@@ -18,3 +18,5 @@ from .graphics import garch
 from .graphics import montecarlo
 from .graphics import heatmap
 from .graphics import volatility_cone
+
+from .ai import newsletter_report
