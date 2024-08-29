@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import yfinance as yf
+import logging
 
 from portfolioanalyzer.utils import (
     get_stock_info, 
@@ -350,6 +351,58 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
         max_drawdown = min(drawdown[1:])
 
         return max_drawdown
+    
+
+def calculate_analyst_suggestion(tickers: list[str], investments: list[float]) -> dict:
+    """
+    Calculate the weighted average analyst suggestion for a portfolio based on Yahoo Finance data. 1 is a strong buy and 5 is a strong sell.
+
+    Parameters:
+    tickers (list[str]): A list of stock tickers in the portfolio.
+    investments (list[float]): A list of investment amounts corresponding to each stock in the portfolio.
+
+    Returns:
+    dict: A dictionary containing individual ticker suggestions and the weighted average suggestion for the portfolio.
+    """
+    suggestions = []
+    weighted_suggestions = []
+    adjusted_investments = []
+    # Set up basic configuration for logging
+    logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+    for ticker, investment in zip(tickers, investments):
+        try:
+            stock_info = yf.Ticker(ticker).info
+            analyst_suggestion = stock_info.get('recommendationMean', None)
+            
+            if analyst_suggestion:
+                suggestions.append({
+                    "ticker": ticker,
+                    "suggestion": analyst_suggestion
+                })
+                weighted_suggestions.append(analyst_suggestion * investment)
+                adjusted_investments.append(investment)
+            else:
+                logging.warning(f"No analyst suggestion available for {ticker}. Skipping...")
+        
+        except Exception as e:
+            logging.error(f"Error retrieving data for {ticker}: {e}")
+            continue
+
+    if not suggestions:
+        logging.warning("No valid analyst suggestions were retrieved for the portfolio.")
+        return {
+            "individual_suggestions": [],
+            "weighted_average_suggestion": None
+        }
+
+    # Calculate the weighted average suggestion
+    total_adjusted_investment = sum(adjusted_investments)
+    weighted_average_suggestion = sum(weighted_suggestions) / total_adjusted_investment if total_adjusted_investment > 0 else None
+
+    return {
+        "individual_suggestions": suggestions,
+        "weighted_average_suggestion": weighted_average_suggestion
+    }
 
 
 def calculate_portfolio_metrics(

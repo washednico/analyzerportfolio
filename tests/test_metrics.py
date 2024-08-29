@@ -6,7 +6,8 @@ from portfolioanalyzer.metrics import (
     calculate_var, 
     calculate_portfolio_scenarios, 
     calculate_dividend_yield, 
-    calculate_max_drawdown
+    calculate_max_drawdown,
+    calculate_analyst_suggestion
     )
 
 from portfolioanalyzer.graphics import (
@@ -48,6 +49,7 @@ def test_everything():
     analyst_info = calculate_portfolio_scenarios(ticker,investments,base_currency)
     dividend_yield = calculate_dividend_yield(ticker, investments)
     max_drawdown = calculate_max_drawdown(data, ticker, investments)
+    analyst_info = calculate_analyst_suggestion(ticker,investments)
 
     print("Beta: ", beta)
     print("Alpha: ", alpha)
@@ -58,6 +60,7 @@ def test_everything():
     print("Analyst Info: ", analyst_info)
     print("Dividend Yield: ", dividend_yield)
     print("Max Drawdown: ", max_drawdown)
+    print("Analyst Info: ", analyst_info)
     
     compare_portfolio_to_market(data, ticker, investments, market_ticker)
     garch(data, ticker, investments)
@@ -71,11 +74,11 @@ def test_everything():
     print("\n   | Markowitz Optimal Portfolio |   ")
     print("Optimal Weights:", markowitz_portfolio)
 
-    report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
-    print(report)
+    #report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
+    #print(report)
 
-    suggestion = get_suggestion(data, ticker, investments, openai_key)
-    print(suggestion)
+    #suggestion = get_suggestion(data, ticker, investments, openai_key)
+    #print(suggestion)
 
     
     # optimal_portfolio = portfolio_optimization(data, ticker, investments)

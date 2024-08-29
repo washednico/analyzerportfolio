@@ -11,7 +11,9 @@ from .metrics import download_data
 from .metrics import calculate_portfolio_scenarios
 from .metrics import calculate_dividend_yield
 from .metrics import calculate_max_drawdown
+from .metrics import calculate_analyst_suggestion
 from .metrics import calculate_portfolio_metrics
+
 
 from .graphics import compare_portfolio_to_market
 from .graphics import simulate_pac
