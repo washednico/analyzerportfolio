@@ -24,3 +24,4 @@ from .graphics import volatility_cone
 
 from .ai import newsletter_report
 from .ai import get_suggestion
+from .ai import monitor_news

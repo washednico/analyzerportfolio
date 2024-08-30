@@ -26,7 +26,8 @@ from portfolioanalyzer.optimization import (
 
 from portfolioanalyzer.ai import (
     newsletter_report,
-    get_suggestion
+    get_suggestion,
+    monitor_news
 )
 
 def test_everything():
@@ -46,7 +47,7 @@ def test_everything():
     sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
     var = calculate_var(data, ticker, investments)
     var_5_h = calculate_var(data,ticker,investments,confidence_level=0.99,time_horizon=5,method='historical')
-    analyst_info = calculate_portfolio_scenarios(ticker,investments,base_currency)
+    portfolio_scenarios = calculate_portfolio_scenarios(ticker,investments,base_currency)
     dividend_yield = calculate_dividend_yield(ticker, investments)
     max_drawdown = calculate_max_drawdown(data, ticker, investments)
     analyst_info = calculate_analyst_suggestion(ticker,investments)
@@ -57,7 +58,7 @@ def test_everything():
     print("Sortino Ratio: ", sortino_ratio)
     print("Value at Risk: ", var)
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
-    print("Analyst Info: ", analyst_info)
+    print("Portfolio Scenarios: ", portfolio_scenarios)
     print("Dividend Yield: ", dividend_yield)
     print("Max Drawdown: ", max_drawdown)
     print("Analyst Info: ", analyst_info)
@@ -69,6 +70,7 @@ def test_everything():
     heatmap(data, ticker, market_ticker)
     volatility_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments)
+    #monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
     
     markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')
     print("\n   | Markowitz Optimal Portfolio |   ")
