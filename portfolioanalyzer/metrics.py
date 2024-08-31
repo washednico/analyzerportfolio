@@ -9,7 +9,8 @@ from portfolioanalyzer.utils import (
     get_current_rate, 
     get_currency, 
     get_exchange_rate, 
-    convert_to_base_currency
+    convert_to_base_currency,
+    check_dataframe
 )
 
 def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
@@ -74,27 +75,6 @@ def calculate_portfolio_returns(investments:list[float], stock_returns:pd.DataFr
     portfolio_returns = (stock_returns * weights).sum(axis=1)
 
     return portfolio_returns.dropna()
-
-def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float] = None, market_ticker:str = None) -> bool:
-    """
-    Check if necessary variables exist in the provided data
-    """
-    #Ensure there is a position in all tickers
-    if investments is not None:
-        if len(tickers) != len(investments):
-            raise ValueError("The number of tickers must match the number of investments.")
-
-    # Ensure the market index is in the DataFrame (OPTIONAL)
-    if market_ticker is not None:
-        if market_ticker not in data.columns:
-            raise ValueError(f"Market index '{market_ticker}' not found in the provided data.")
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if [ticker for ticker in tickers if ticker not in data.columns]:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    return True
 
 def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_ticker: str, risk_free_rate: float = 0.01) -> tuple:
     """
@@ -338,7 +318,7 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
     float: The overall maxdrawdown of the portfolio as a percentage.
     """ 
 
-    if check_dataframe(data, tickers, investments, market_ticker=None):
+    if check_dataframe(data, tickers, investments):
 
         # Calculate portfolio returns as a weighted sum of individual stock returns
         stock_returns = calculate_daily_returns(data[tickers]) 
@@ -352,7 +332,6 @@ def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: 
 
         return max_drawdown
     
-
 def calculate_analyst_suggestion(tickers: list[str], investments: list[float]) -> dict:
     """
     Calculate the weighted average analyst suggestion for a portfolio based on Yahoo Finance data. 1 is a strong buy and 5 is a strong sell.
@@ -403,7 +382,6 @@ def calculate_analyst_suggestion(tickers: list[str], investments: list[float]) -
         "individual_suggestions": suggestions,
         "weighted_average_suggestion": weighted_average_suggestion
     }
-
 
 def calculate_portfolio_metrics(
     price_df: pd.DataFrame,

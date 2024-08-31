@@ -75,17 +75,14 @@ def test_everything():
     markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')
     print("\n   | Markowitz Optimal Portfolio |   ")
     print("Optimal Weights:", markowitz_portfolio)
+    print( ' \n \n \n \n \n ')
 
-    #report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
-    #print(report)
+    # report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
+    # print(report)
+    # print( ' \n \n \n \n \n ')
 
-    #suggestion = get_suggestion(data, ticker, investments, openai_key)
-    #print(suggestion)
-
-    
-    # optimal_portfolio = portfolio_optimization(data, ticker, investments)
-    # print("\n   | Optimal Portfolio |   ")
-    # print("Optimal Weights:", optimal_portfolio)
+    # suggestion = get_suggestion(data, ticker, investments, openai_key)
+    # print(suggestion)
 
 
 
