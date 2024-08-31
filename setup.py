@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='portfolioanalyzer',
+    name='analyzerportfolio',
     version='0.1.0',
     author='Nicola Fochi, Leonardo Mario di Gennaro',
     author_email='portfolioanalyzer-devs@proton.me',
