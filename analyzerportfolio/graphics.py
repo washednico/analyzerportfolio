@@ -5,7 +5,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
 from arch import arch_model
-from portfolioanalyzer.metrics import (
+from analyzerportfolio.metrics import (
     calculate_daily_returns,
     calculate_portfolio_returns,
     check_dataframe

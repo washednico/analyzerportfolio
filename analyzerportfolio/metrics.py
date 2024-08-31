@@ -4,7 +4,7 @@ from scipy.stats import norm
 import yfinance as yf
 import logging
 
-from portfolioanalyzer.utils import (
+from analyzerportfolio.utils import (
     get_stock_info, 
     get_current_rate, 
     get_currency, 

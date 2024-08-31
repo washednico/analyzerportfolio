@@ -3,11 +3,11 @@ import pandas as pd
 
 from scipy import optimize
 
-from portfolioanalyzer.metrics import (
+from analyzerportfolio.metrics import (
     calculate_daily_returns
 )
 
-from portfolioanalyzer.utils import (
+from analyzerportfolio.utils import (
     check_dataframe
 )
 

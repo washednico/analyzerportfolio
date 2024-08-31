@@ -1,9 +1,10 @@
 import openai
 import pandas as pd
-from portfolioanalyzer.metrics import calculate_portfolio_metrics
+from analyzerportfolio.metrics import calculate_portfolio_metrics
 import threading
 import time
 import yfinance as yf
+import openai
 from datetime import datetime, timedelta
 
 def newsletter_report(
@@ -198,7 +199,7 @@ def monitor_news(
 
                 for article in news:
                     pub_date = datetime.fromtimestamp(article['providerPublishTime'])
-                    if pub_date < last_checked:
+                    if pub_date > last_checked:
                         title = article['title']
                         link = article['link']
                         summary = article.get('summary', '')

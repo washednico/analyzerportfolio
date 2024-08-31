@@ -1,4 +1,4 @@
-from portfolioanalyzer.metrics import (
+from analyzerportfolio.metrics import (
     calculate_beta_and_alpha, 
     calculate_sharpe_ratio, 
     calculate_sortino_ratio, 
@@ -10,7 +10,7 @@ from portfolioanalyzer.metrics import (
     calculate_analyst_suggestion
     )
 
-from portfolioanalyzer.graphics import (
+from analyzerportfolio.graphics import (
     compare_portfolio_to_market, 
     simulate_pac, 
     garch, 
@@ -20,11 +20,11 @@ from portfolioanalyzer.graphics import (
     drawdown_plot
 )
 
-from portfolioanalyzer.optimization import (
+from analyzerportfolio.optimization import (
     markowitz_optimization
 )
 
-from portfolioanalyzer.ai import (
+from analyzerportfolio.ai import (
     newsletter_report,
     get_suggestion,
     monitor_news
