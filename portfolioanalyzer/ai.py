@@ -4,7 +4,6 @@ from portfolioanalyzer.metrics import calculate_portfolio_metrics
 import threading
 import time
 import yfinance as yf
-import openai
 from datetime import datetime, timedelta
 
 def newsletter_report(

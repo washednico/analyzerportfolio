@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
-import plotly.graph_objs as go
 
 from scipy import optimize
 
 from portfolioanalyzer.metrics import (
-    calculate_daily_returns,
+    calculate_daily_returns
+)
+
+from portfolioanalyzer.utils import (
     check_dataframe
 )
 
@@ -96,93 +98,6 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
 
         return result
     
-    def efficient_return(initializer, bounds_2, constraints_2, args_2):#, args:float = 0.10)
-        """Finds the portfolio with the minimum volatility for a given target
-        return.
-
-        :param target: The target return of the optimised portfolio.
-        :param save_weights: For internal use only, default: True
-             Whether to save the optimised weights in the instance variable
-             ``weights`` (and ``df_weights``). Useful for the case of computing
-             the efficient frontier after doing an optimisation, else the optimal
-             weights are overwritten by the efficient frontier computations.
-             Best to ignore this argument.
-
-        :rtype: :py:data:`~.finquant.data_types.ARRAY_OR_DATAFRAME`
-        :return:
-            - if ``save_weights`` is True:
-                a DataFrame of weights/allocation of stocks within the optimised portfolio.
-            - if ``save_weights`` is False:
-                a ``numpy.ndarray`` of weights/allocation of stocks within the optimised portfolio.
-        """
-        # optimisation
-        result = optimize.minimize(minimize_volatility,
-                                    x0=initializer,
-                                    args=args_2,
-                                    method='SLSQP',
-                                    bounds=bounds_2,
-                                    constraints=constraints_2)
-        
-        return result['x'].round(4)
- 
-    def efficient_frontier(mean_returns, covar_matrix, initializer):
-        """Gets portfolios for a range of given target returns.
-        If no targets were provided, the algorithm will find the minimum
-        and maximum returns of the portfolio's individual stocks, and set
-        the target range according to those values.
-        Results in the Efficient Frontier.
-
-        :param targets: A list/array: range of target returns, default: ``None``
-
-        :return: Array of (volatility, return) values
-        """
-
-        args_2 = (mean_returns, covar_matrix)
-        # here we have an additional constraint:
-        constraints_2 = ({'type' : 'eq', 'fun': lambda x: mean_returns - target }) 
-        bounds_2 = tuple((0,1) for x in range(num_assets))
-
-        # set range of target returns from the individual expected
-        # returns of the stocks in the portfolio.
-        min_return = mean_returns.min() * 252
-        max_return = mean_returns.max() * 252
-        targets = np.linspace(round(min_return, 3), round(max_return, 3), 100)
-        
-        # compute the efficient frontier
-        efrontier = []
-        for target in targets:
-            weights = efficient_return(initializer, bounds_2, constraints_2, args_2)
-            efrontier.append(
-                [
-                    portfolio_performance(weights, mean_returns, covar_matrix)['volatility'],
-                    target
-                ]
-            )
-        efrontier = np.array(efrontier, dtype=np.float64)
-        print(efrontier)
-        return efrontier
-
-    # def plot_efrontier(self) -> None:
-    #     """Plots the Efficient Frontier."""
-    #     if self.efrontier.size == 0:
-    #         # compute efficient frontier first
-    #         self.efficient_frontier()
-    #     plt.plot(
-    #         self.efrontier[:, 0],
-    #         self.efrontier[:, 1],
-    #         linestyle="-.",
-    #         color="black",
-    #         lw=2,
-    #         label="Efficient Frontier",
-    #     )
-    #     plt.title("Efficient Frontier")
-    #     plt.xlabel("Volatility")
-    #     plt.ylabel("Expected Return")
-    #     plt.legend()
-    #     return None
-    
-     #TODO: efficient frontier plot 
-    
     if check_dataframe(data, tickers, investments):
 
         data = data.divide(data.iloc[0] / 100) # Normalize prices 
@@ -196,10 +111,6 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
         bounds = tuple((0,1) for x in range(num_assets))
         initializer = num_assets * [1./num_assets,]
         
-        # #Launch efficient frontier
-        # if target:
-        #     efficient_frontier(mean_returns, covar_matrix, initializer)
-
         if method == 'sharpe':
             return optimize_portfolio(minimize_sharpe, initializer, bounds, constraints, tickers, mean_returns, covar_matrix)
         elif method == 'variance':

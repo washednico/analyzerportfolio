@@ -87,7 +87,6 @@ def get_current_rate(base_currency, quote_currency):
     exchange_rate_data = yf.download(exchange_rate_ticker, period='1d')['Adj Close'].iloc[-1]
     return exchange_rate_data
 
-
 def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float] = None, market_ticker:str = None) -> bool:
     """
     Check if necessary variables exist in the provided data

@@ -1,0 +1,7 @@
+openai>=1.43.0 
+pandas>=1.5.1
+yfinance>=0.2.32
+numpy>=1.26.4
+plotly>=5.18.0
+arch>=7.0.0
+scipy>=1.13.0
