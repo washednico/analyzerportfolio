@@ -57,7 +57,7 @@ print("Analyst Info: ", analyst_info)
 ```
 ### Output Metrics Calculation
 
-```bash
+```text
 Beta:  1.1189692556261102
 Alpha:  1.2362893285804213
 Sharpe Ratio:  -0.524611494862588
@@ -100,7 +100,7 @@ print("Optimal Weights:", markowitz_portfolio)
 ```
 
 ### Output Portfolio optimization
-```bash
+```text
 Optimal Weights: {'weights': [('AAPL', 0.1667), ('MSFT', 0.1667), ('GOOGL', 0.1667), ('AMZN', 0.1667), ('TSLA', 0.1667), ('E', 0.1667)], 'return': 0.3177235229590848, 'volatility': 0.2860601198632393}
 ```
 
