@@ -154,9 +154,7 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: 
         annualized_return = cumulative_return ** (252 / num_days) - 1
 
         # Calculate Sharpe ratio
-        sharpe_ratio = (annualized_return - risk_free_rate) / annualized_std_dev
-        print(annualized_return, annualized_std_dev)
-        
+        sharpe_ratio = (annualized_return - risk_free_rate) / annualized_std_dev        
         return sharpe_ratio
 
 def calculate_sortino_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
