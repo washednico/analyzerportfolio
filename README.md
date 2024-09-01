@@ -15,10 +15,9 @@ pip install analyzerportfolio
 
 Below is an example of how to use AnalyzerPortfolio to calculate various portfolio metrics, generate graphical outputs, and analyze stock news.
 
-### Example: Initiation
+### Example: Variables
 
 ```python
-import analyzerportfolio as ap
 ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
 investments = [100,200,300,300,200,500]
 start_date = '2019-01-01'
@@ -30,10 +29,12 @@ openai_key = ""  # Add your OpenAI key here
 ```
 ### Example: Metrics Calculation
 ```python
+import analyzerportfolio as ap
+
 # Download historical data
 data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker)
 
-# Calculate portfolio metrics
+# Calculate portfolio metrics - ap.calculate_portfolio_metrics() will return a dict with the major metrics.
 beta, alpha = ap.calculate_beta_and_alpha(data, ticker, investments, market_ticker)
 sharpe_ratio = ap.calculate_sharpe_ratio(data, ticker, investments, risk_free_rate)
 sortino_ratio = ap.calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
@@ -58,10 +59,10 @@ print("Analyst Info: ", analyst_info)
 ### Output Metrics Calculation
 
 ```text
-Beta:  1.1189692556261102
-Alpha:  1.2362893285804213
-Sharpe Ratio:  -0.524611494862588
-Sortino Ratio:  -0.5048406724272857
+Beta:  1.1181819930813468
+Alpha:  0.08161211021082404
+Sharpe Ratio:  0.9268951221173983
+Sortino Ratio:  0.8919636462200137
 Value at Risk:  44.8207337284658
 Value at Risk (5 days, 99% confidence level):  152.097583515136
 Dividend Yield:  0.022281250037500002
@@ -134,9 +135,9 @@ Portfolio Newsletter Report
 ---------------------------
 Portfolio Metrics (Calculated from 2019-01-02 to 2024-08-27)
 - Beta: 1.12
-- Alpha: 1.24
-- Sharpe Ratio: -0.52
-- Sortino Ratio: -0.50
+- Alpha: 0.08
+- Sharpe Ratio: 0.93
+- Sortino Ratio: 0.89
 - Value at Risk: 44.82
 - Max Drawdown: -39.41%
 - Dividend Yield: 2.23%
@@ -206,9 +207,9 @@ Portfolio Improvement Suggestions
 ---------------------------
 Portfolio Metrics (Calculated from 2019-01-02 to 2024-08-27)
 - Beta: 1.12
-- Alpha: 1.24
-- Sharpe Ratio: -0.52
-- Sortino Ratio: -0.50
+- Alpha: 0.08
+- Sharpe Ratio: 0.93
+- Sortino Ratio: 0.89
 - Value at Risk: 44.82
 - Max Drawdown: -39.41%
 - Dividend Yield: 2.23%
