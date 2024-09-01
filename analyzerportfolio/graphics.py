@@ -5,6 +5,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
 from arch import arch_model
+from scipy.stats import norm
 from analyzerportfolio.metrics import (
     calculate_daily_returns,
     calculate_portfolio_returns,
@@ -76,38 +77,43 @@ def montecarlo(
             market_returns_df = calculate_daily_returns(price_df[[market_ticker]])
             market_sim_df = run_monte_carlo(market_returns_df, [1], num_market_simulations, simulation_length, initial_value=total_investment)
         
+        # Calculate statistics for portfolio
+        portfolio_end_values = portfolio_sim_df.iloc[-1]
+        portfolio_max = portfolio_end_values.max()
+        portfolio_min = portfolio_end_values.min()
+        portfolio_median = portfolio_end_values.median()
+        portfolio_avg = portfolio_end_values.mean()
+
+        # Calculate statistics for market if applicable
+        market_max = market_min = market_median = market_avg = None
+        if not market_sim_df.empty:
+            market_end_values = market_sim_df.iloc[-1]
+            market_max = market_end_values.max()
+            market_min = market_end_values.min()
+            market_median = market_end_values.median()
+            market_avg = market_end_values.mean()
+        
         if plot:
             # Create subplots for the portfolio and market simulations
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=('Portfolio Simulations', 'Market Simulations'))
+            rows = 2 if not market_sim_df.empty else 1
+            fig = make_subplots(rows=rows, cols=1, shared_xaxes=True, subplot_titles=('Portfolio Simulations', 'Market Simulations' if not market_sim_df.empty else ''))
 
             # Plot portfolio simulations
             for i in range(num_portfolio_simulations):
                 fig.add_trace(go.Scatter(x=list(range(simulation_length)), y=portfolio_sim_df[i], mode='lines', line=dict(color='orange', width=1), showlegend=False), row=1, col=1)
 
-            # Plot market simulations
+            # Plot market simulations if applicable
             if not market_sim_df.empty:
                 for i in range(num_market_simulations):
                     fig.add_trace(go.Scatter(x=list(range(simulation_length)), y=market_sim_df[i], mode='lines', line=dict(color='green', width=1), showlegend=False), row=2, col=1)
 
-            fig.update_layout(height=800, width=1000, title_text="Monte Carlo Simulation of Portfolio and Market")
-            fig.show()
+            # Update layout with custom title
+            title_text = f"<span style='color:orange'>Portfolio Simulation - Max: {portfolio_max:.2f} | Avg: {portfolio_avg:.2f} | Med: {portfolio_median:.2f} | Min: {portfolio_min:.2f}</span>"
+            if not market_sim_df.empty:
+                title_text += f"<br><span style='color:green'>Market Simulation - Max: {market_max:.2f} | Avg: {market_avg:.2f} | Med: {market_median:.2f} | Min: {market_min:.2f}</span>"
 
-        # Calculate and return statistics for portfolio
-        portfolio_end_values = portfolio_sim_df.iloc[-1]
-        print("Portfolio Simulation Statistics:")
-        print(f"Max Value: {portfolio_end_values.max():.2f}")
-        print(f"Min Value: {portfolio_end_values.min():.2f}")
-        print(f"Median Value: {portfolio_end_values.median():.2f}")
-        print(f"Average Value: {portfolio_end_values.mean():.2f}")
-        
-        # Calculate and return statistics for market
-        if not market_sim_df.empty:
-            market_end_values = market_sim_df.iloc[-1]
-            print("\nMarket Simulation Statistics:")
-            print(f"Max Value: {market_end_values.max():.2f}")
-            print(f"Min Value: {market_end_values.min():.2f}")
-            print(f"Median Value: {market_end_values.median():.2f}")
-            print(f"Average Value: {market_end_values.mean():.2f}")
+            fig.update_layout(height=800, width=1000, title_text=title_text)
+            fig.show()
 
         return portfolio_sim_df, market_sim_df
 
@@ -478,6 +484,7 @@ def drawdown_plot(
 
         return drawdown
 
+
 def probability_cone(
     data: pd.DataFrame,
     tickers: list[str],
@@ -519,25 +526,36 @@ def probability_cone(
     mean_return = portfolio_returns.mean()
     volatility = portfolio_returns.std()
 
-    # Generate a range of time steps (days)
+    # Set the initial value based on the investments provided by the user
+    initial_value = sum(investments)
+    
+    # Initialize arrays to hold the expected value and confidence intervals
     time_steps = np.arange(1, time_horizon + 1)
-    
-    # Calculate the expected value over time
-    initial_value = portfolio_values.iloc[0]
-    expected_value = initial_value * np.exp(mean_return * time_steps)
-    
-    # Prepare data for the confidence intervals
-    probability_cone_data = {'Days': time_steps, 'Expected Value': expected_value}
+    expected_value = np.zeros(time_horizon)
+    lower_bounds = {ci: np.zeros(time_horizon) for ci in confidence_intervals}
+    upper_bounds = {ci: np.zeros(time_horizon) for ci in confidence_intervals}
+
+    # Calculate the expected value and confidence intervals for each time step
+    for t in time_steps:
+        cumulative_return = mean_return * t
+        expected_value[t-1] = initial_value * np.exp(cumulative_return)
+        
+        for ci in confidence_intervals:
+            z_score = norm.ppf((1 + ci) / 2)  # Z-score for the given confidence interval
+            std_dev = z_score * volatility * np.sqrt(t)  # Scaling with sqrt(t)
+            lower_bounds[ci][t-1] = initial_value * np.exp(cumulative_return - std_dev)
+            upper_bounds[ci][t-1] = initial_value * np.exp(cumulative_return + std_dev)
+
+    # Combine everything into a DataFrame
+    probability_cone_data = {
+        'Days': time_steps,
+        'Expected Value': expected_value
+    }
     
     for ci in confidence_intervals:
-        z_score = np.abs(np.log(1 - (1 - ci) / 2))  # Z-score for the given confidence interval
-        lower_bound = initial_value * np.exp((mean_return - z_score * volatility) * time_steps)
-        upper_bound = initial_value * np.exp((mean_return + z_score * volatility) * time_steps)
-        
-        probability_cone_data[f'Lower Bound {int(ci*100)}%'] = lower_bound
-        probability_cone_data[f'Upper Bound {int(ci*100)}%'] = upper_bound
-    
-    # Convert to DataFrame
+        probability_cone_data[f'Lower Bound {int(ci*100)}%'] = lower_bounds[ci]
+        probability_cone_data[f'Upper Bound {int(ci*100)}%'] = upper_bounds[ci]
+
     probability_cone_df = pd.DataFrame(probability_cone_data)
 
     if plot:
