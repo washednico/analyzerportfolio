@@ -16,7 +16,7 @@ from analyzerportfolio.graphics import (
     garch, 
     montecarlo, 
     heatmap, 
-    volatility_cone, 
+    probability_cone, 
     drawdown_plot
 )
 
@@ -68,7 +68,7 @@ def test_everything():
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
     montecarlo(data,ticker,investments,250,50,50,market_ticker)
     heatmap(data, ticker, market_ticker)
-    volatility_cone(data, ticker, investments,750)
+    probability_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments)
     monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
     

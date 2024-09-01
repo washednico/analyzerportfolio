@@ -478,7 +478,7 @@ def drawdown_plot(
 
         return drawdown
 
-def volatility_cone(
+def probability_cone(
     data: pd.DataFrame,
     tickers: list[str],
     investments: list[float],

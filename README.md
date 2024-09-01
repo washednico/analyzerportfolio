@@ -77,7 +77,7 @@ ap.garch(data, ticker, investments)
 ap.simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
 ap.montecarlo(data, ticker, investments, 250, 50, 50, market_ticker)
 ap.heatmap(data, ticker, market_ticker)
-ap.volatility_cone(data, ticker, investments, 750)
+ap.probability_cone(data, ticker, investments, 750)
 ap.drawdown_plot(data, ticker, investments)
 ```
 ### Output Graphics Module

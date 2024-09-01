@@ -19,7 +19,7 @@ from .graphics import simulate_pac
 from .graphics import garch
 from .graphics import montecarlo
 from .graphics import heatmap
-from .graphics import volatility_cone
+from .graphics import probability_cone
 from .graphics import drawdown_plot
 
 from .ai import newsletter_report
