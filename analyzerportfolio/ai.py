@@ -199,7 +199,7 @@ def monitor_news(
 
                 for article in news:
                     pub_date = datetime.fromtimestamp(article['providerPublishTime'])
-                    if pub_date < last_checked:
+                    if pub_date > last_checked:
                         title = article['title']
                         link = article['link']
                         summary = article.get('summary', '')
