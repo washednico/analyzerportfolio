@@ -4,11 +4,9 @@ AnalyzerPortfolio is a Python package designed for comprehensive portfolio analy
 
 ## Installation
 
-You can install AnalyzerPortfolio using pip:
+You can install analyzerportfolio using pip:
 
-```bash
-pip install AnalyzerPortfolio
-```
+'pip install analyzerportfolio'
 
 
 ## Usage
@@ -111,10 +109,10 @@ def test_everything():
     # Get AI-powered suggestions for portfolio improvement
     suggestion = get_suggestion(data, ticker, investments, openai_key)
     print(suggestion)
+```
 
 # Run the full test
 test_everything()
-```
 
 ## Contributions
 
