@@ -81,9 +81,8 @@ ap.volatility_cone(data, ticker, investments, 750)
 ap.drawdown_plot(data, ticker, investments)
 ```
 ### Output Graphics Module
-```bash
-graphics here
-```
+![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pac.png?raw=true)
+
 
 ### Example: Portfolio Optimization
 ```python
