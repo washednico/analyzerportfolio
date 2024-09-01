@@ -47,9 +47,9 @@ def test_everything():
     sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
     var = calculate_var(data, ticker, investments)
     var_5_h = calculate_var(data,ticker,investments,confidence_level=0.99,time_horizon=5,method='historical')
-    portfolio_scenarios = calculate_portfolio_scenarios(ticker,investments,base_currency)
     dividend_yield = calculate_dividend_yield(ticker, investments)
     max_drawdown = calculate_max_drawdown(data, ticker, investments)
+    portfolio_scenarios = calculate_portfolio_scenarios(ticker,investments,base_currency)
     analyst_info = calculate_analyst_suggestion(ticker,investments)
 
     print("Beta: ", beta)
@@ -58,9 +58,9 @@ def test_everything():
     print("Sortino Ratio: ", sortino_ratio)
     print("Value at Risk: ", var)
     print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
-    print("Portfolio Scenarios: ", portfolio_scenarios)
     print("Dividend Yield: ", dividend_yield)
     print("Max Drawdown: ", max_drawdown)
+    print("Portfolio Scenarios: ", portfolio_scenarios)
     print("Analyst Info: ", analyst_info)
     
     compare_portfolio_to_market(data, ticker, investments, market_ticker)
