@@ -6,7 +6,9 @@ AnalyzerPortfolio is a Python package designed for comprehensive portfolio analy
 
 You can install analyzerportfolio using pip:
 
-'pip install analyzerportfolio'
+```bash
+pip install analyzerportfolio
+```
 
 
 ## Usage
