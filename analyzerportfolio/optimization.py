@@ -21,6 +21,7 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
     investments (list[float]): List of monetary investments for each asset.
     rf_rate (float): Indicating risk free rate (defaul is 0.0).
     plot (bool): Whether to plot the results (default is True).
+    
 
 
     Returns:

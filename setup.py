@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='analyzerportfolio',
-    version='0.1.0',
+    version='0.1.1',
     author='Nicola Fochi, Leonardo Mario di Gennaro',
     author_email='portfolioanalyzer-devs@proton.me',
     description='A Python package for stock portfolio analysis and optimization.',
