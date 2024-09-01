@@ -109,10 +109,12 @@ def test_everything():
     # Get AI-powered suggestions for portfolio improvement
     suggestion = get_suggestion(data, ticker, investments, openai_key)
     print(suggestion)
-```
 
 # Run the full test
 test_everything()
+
+```
+
 
 ## Contributions
 
