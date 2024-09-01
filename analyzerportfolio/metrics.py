@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import norm
 import yfinance as yf
 import logging
+import statsmodels.api as sm
 
 from analyzerportfolio.utils import (
     get_stock_info, 
@@ -93,22 +94,30 @@ def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments
 
     if check_dataframe(data, tickers, investments, market_ticker):
 
-        #Calculate market and stocks daily returns
+        # Calculate daily market and stock returns
         market_returns = calculate_daily_returns(data[market_ticker])
         stock_returns = calculate_daily_returns(data[tickers])
 
         # Calculate portfolio returns as a weighted sum of individual stock returns
         portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
 
-        # Calculate the cumulative returns over the period
-        cumulative_portfolio_return = (1 + portfolio_returns).prod() - 1
-        cumulative_market_return = (1 + market_returns).prod() - 1
-        
-        # Calculate the portfolio Alpha and Beta
-        beta = np.cov(portfolio_returns, market_returns)[0, 1] / np.var(market_returns)
-        alpha = (cumulative_portfolio_return - risk_free_rate) - beta * (cumulative_market_return - risk_free_rate)
-        
-        return beta, alpha
+        # Convert the annual risk-free rate to a daily rate
+        daily_risk_free_rate = (1 + risk_free_rate) ** (1/252) - 1
+
+        # Excess returns
+        excess_portfolio_returns = portfolio_returns - daily_risk_free_rate
+        excess_market_returns = market_returns - daily_risk_free_rate
+
+        # Add a constant for the intercept in the regression model
+        X = sm.add_constant(excess_market_returns)
+
+        # Perform linear regression to find alpha and beta
+        model = sm.OLS(excess_portfolio_returns, X).fit()
+        alpha = model.params['const']
+        beta = model.params[market_returns.name]
+        annualized_alpha = (1 + alpha) ** 252 - 1
+
+        return beta, annualized_alpha
 
 def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], risk_free_rate: float = 0.01) -> float:
     """
@@ -131,12 +140,22 @@ def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: 
         # Calculate portfolio returns as a weighted sum of individual stock returns
         portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
         
-        # Calculate average portfolio return and standard deviation
-        average_portfolio_return = portfolio_returns.mean()
+        # Calculate  portfolio standard deviation
         portfolio_std_dev = portfolio_returns.std()
 
+        trading_days = 252
+        annualized_std_dev = portfolio_std_dev * (trading_days ** 0.5)
+
+        # Calculate compounded return over the entire period
+        cumulative_return = (1 + portfolio_returns).prod()  # Product of (1 + daily returns)
+
+        # Annualize the cumulative return
+        num_days = len(portfolio_returns)
+        annualized_return = cumulative_return ** (252 / num_days) - 1
+
         # Calculate Sharpe ratio
-        sharpe_ratio = (average_portfolio_return - risk_free_rate) / portfolio_std_dev
+        sharpe_ratio = (annualized_return - risk_free_rate) / annualized_std_dev
+        print(annualized_return, annualized_std_dev)
         
         return sharpe_ratio
 
@@ -160,14 +179,22 @@ def calculate_sortino_ratio(data: pd.DataFrame, tickers: list[str], investments:
         stock_returns = calculate_daily_returns(data[tickers]) 
         portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
     
-        # Calculate the average portfolio return
-        average_portfolio_return = portfolio_returns.mean()
+       # Calculate the compounded return over the period
+        cumulative_return = (1 + portfolio_returns).prod()  # Calculate cumulative return
+        num_days = len(portfolio_returns)
+        
+        # Annualize the portfolio return
+        annualized_return = cumulative_return ** (252 / num_days) - 1
         
         # Calculate downside deviation
         downside_deviation = np.sqrt(np.mean(np.minimum(0, portfolio_returns - target_return) ** 2))
         
+        trading_days = 252
+        annualized_downside_deviation = downside_deviation * np.sqrt(trading_days)
+        
+        
         # Calculate Sortino ratio
-        sortino_ratio = (average_portfolio_return - risk_free_rate) / downside_deviation
+        sortino_ratio = (annualized_return - risk_free_rate) / annualized_downside_deviation
         
         return sortino_ratio
 
