@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='analyzerportfolio',
@@ -10,6 +10,7 @@ setup(
     long_description_content_type='text/markdown',
     license='MIT',
     url = 'https://github.com/washednico/portfolioanalyzer',
+    packages=find_packages(include=['analyzerportfolio', 'analyzerportfolio.*']),
     install_requires=[
         'openai>=1.43.0',
         'pandas>=1.5.1',
