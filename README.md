@@ -1,2 +1,121 @@
-# portfolioanalyzer
-Python package to run stocks portfolio analysis 
+# AnalyzerPortfolio
+
+AnalyzerPortfolio is a Python package designed for comprehensive portfolio analysis. Built on top of the `yfinance` library, it provides a wide range of metrics for analyzing portfolio performance, including beta, alpha, Sharpe ratio, Sortino ratio, and Value at Risk (VaR). The package also offers advanced tools for generating graphical outputs, performing Monte Carlo simulations, and optimizing portfolios. Additionally, AnalyzerPortfolio includes AI-powered features for monitoring stock news and generating investment reports.
+
+## Installation
+
+You can install AnalyzerPortfolio using pip:
+
+```bash
+pip install AnalyzerPortfolio
+```
+
+
+## Usage
+
+Below is an example of how to use AnalyzerPortfolio to calculate various portfolio metrics, generate graphical outputs, and analyze stock news.
+
+### Example: Full Portfolio Analysis
+
+```python
+from analyzerportfolio.metrics import (
+    calculate_beta_and_alpha, 
+    calculate_sharpe_ratio, 
+    calculate_sortino_ratio, 
+    download_data, 
+    calculate_var, 
+    calculate_portfolio_scenarios, 
+    calculate_dividend_yield, 
+    calculate_max_drawdown,
+    calculate_analyst_suggestion
+)
+
+from analyzerportfolio.graphics import (
+    compare_portfolio_to_market, 
+    simulate_pac, 
+    garch, 
+    montecarlo, 
+    heatmap, 
+    volatility_cone, 
+    drawdown_plot
+)
+
+from analyzerportfolio.optimization import (
+    markowitz_optimization
+)
+
+from analyzerportfolio.ai import (
+    newsletter_report,
+    get_suggestion,
+    monitor_news
+)
+
+def test_everything():
+    ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
+    investments = [100,200,300,300,200,500]
+    start_date = '2019-01-01'
+    end_date = '2024-08-28'
+    market_ticker = '^GSPC'
+    risk_free_rate = 0.01
+    base_currency = 'EUR'
+    openai_key = ""  # Add your OpenAI key here
+    
+    # Download historical data
+    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker)
+    
+    # Calculate portfolio metrics
+    beta, alpha = calculate_beta_and_alpha(data, ticker, investments, market_ticker)
+    sharpe_ratio = calculate_sharpe_ratio(data, ticker, investments, risk_free_rate)
+    sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
+    var = calculate_var(data, ticker, investments)
+    var_5_h = calculate_var(data, ticker, investments, confidence_level=0.99, time_horizon=5, method='historical')
+    portfolio_scenarios = calculate_portfolio_scenarios(ticker, investments, base_currency)
+    dividend_yield = calculate_dividend_yield(ticker, investments)
+    max_drawdown = calculate_max_drawdown(data, ticker, investments)
+    analyst_info = calculate_analyst_suggestion(ticker, investments)
+
+    print("Beta: ", beta)
+    print("Alpha: ", alpha)
+    print("Sharpe Ratio: ", sharpe_ratio)
+    print("Sortino Ratio: ", sortino_ratio)
+    print("Value at Risk: ", var)
+    print("Value at Risk (5 days, 99% confidence level): ", var_5_h)
+    print("Portfolio Scenarios: ", portfolio_scenarios)
+    print("Dividend Yield: ", dividend_yield)
+    print("Max Drawdown: ", max_drawdown)
+    print("Analyst Info: ", analyst_info)
+    
+    # Generate graphical outputs
+    compare_portfolio_to_market(data, ticker, investments, market_ticker)
+    garch(data, ticker, investments)
+    simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
+    montecarlo(data, ticker, investments, 250, 50, 50, market_ticker)
+    heatmap(data, ticker, market_ticker)
+    volatility_cone(data, ticker, investments, 750)
+    drawdown_plot(data, ticker, investments)
+    
+    # Monitor news
+    monitor_news(ticker, delay=60, loop_forever=True, openai_key=openai_key)
+    
+    # Perform portfolio optimization
+    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method='sortino')
+    print("\n   | Markowitz Optimal Portfolio |   ")
+    print("Optimal Weights:", markowitz_portfolio)
+    print( ' \n \n \n \n \n ')
+
+    # Generate a newsletter report
+    report = newsletter_report(data, ticker, investments, start_date_report="2024-08-01", openai_key=openai_key)
+    print(report)
+    print( ' \n \n \n \n \n ')
+
+    # Get AI-powered suggestions for portfolio improvement
+    suggestion = get_suggestion(data, ticker, investments, openai_key)
+    print(suggestion)
+
+# Run the full test
+test_everything()
+```
+
+## Contributions
+
+Contributions are welcome! Please submit pull requests or report issues via the GitHub repository.
