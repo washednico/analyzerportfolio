@@ -80,8 +80,17 @@ ap.heatmap(data, ticker, market_ticker)
 ap.probability_cone(data, ticker, investments, 750)
 ap.drawdown_plot(data, ticker, investments)
 ```
-### Output Graphics Module
+### Output Portfolio vs Market  
+![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pfvsmkt.png?raw=true)
+### Output Simulate Pac 
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pac.png?raw=true)
+### Output Heatmap  
+![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/heatmap.png?raw=true)
+### Output Montecarlo 
+![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/montecarlo.png?raw=true)
+### Output Probability Cone 
+![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/prob_cone.png?raw=true)
+
 
 
 ### Example: Portfolio Optimization
