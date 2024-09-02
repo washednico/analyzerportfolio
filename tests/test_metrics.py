@@ -70,7 +70,6 @@ def test_everything():
     heatmap(data, ticker, market_ticker)
     probability_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments, market_ticker)
-    exit()
     monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
     
     markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')
