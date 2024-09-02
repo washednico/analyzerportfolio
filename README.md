@@ -199,7 +199,7 @@ The performance of these stocks contributed significantly to the overall negativ
 
 ### Example: Portfolio Suggestions - AI
 ```python
-report = ap.newsletter_report(data, ticker, investments, start_date_report="2024-08-01", openai_key=openai_key)
+report = ap.get_suggestion(data, ticker, investments, openai_key)
 print(report)
 ```
 
