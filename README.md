@@ -93,7 +93,7 @@ ap.drawdown_plot(data, ticker, investments,market_ticker)
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/prob_cone.png?raw=true)
 ### Output Drawdown 
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/drawdown.png?raw=true)
-### Output Drawdown 
+### Output Garch 
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/garch.png?raw=true)
 
 
