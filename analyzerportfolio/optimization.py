@@ -21,8 +21,8 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
     investments (list[float]): List of monetary investments for each asset.
     rf_rate (float): Indicating risk free rate (defaul is 0.0).
     plot (bool): Whether to plot the results (default is True).
-    
-
+    method (str): Optimization method to use (default is 'sharpe'). Value accepted are 'sharpe', 'variance', 'return', 'sortino'.
+    target (float): Target return for the portfolio (default is 0.05).
 
     Returns:
     dict: Dictionary containg portfolio metrics based on optimal weights

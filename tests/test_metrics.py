@@ -64,12 +64,13 @@ def test_everything():
     print("Analyst Info: ", analyst_info)
     
     compare_portfolio_to_market(data, ticker, investments, market_ticker)
-    garch(data, ticker, investments)
+    garch(data, ticker, investments,market_ticker)
     simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
     montecarlo(data,ticker,investments,250,50,50,market_ticker)
     heatmap(data, ticker, market_ticker)
     probability_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments, market_ticker)
+    exit()
     monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
     
     markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')

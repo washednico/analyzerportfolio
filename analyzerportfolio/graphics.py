@@ -332,6 +332,7 @@ def garch(
     data: pd.DataFrame,
     tickers: list[str],
     investments: list[float],
+    market: str = "",
     plot: bool = True
 ) -> pd.Series:
     """
@@ -349,17 +350,10 @@ def garch(
     if len(tickers) != len(investments):
         raise ValueError("The number of tickers must match the number of investments.")
     
-    # Normalize investments to convert to an equivalent weight in portfolio
-    investments = np.array(investments)
-    
-    # Calculate the number of shares bought for each stock
-    shares = investments / data[tickers].iloc[0]
+    stock_returns = calculate_daily_returns(data[tickers])
 
-    # Calculate the portfolio value at each time step
-    portfolio_values = (shares * data[tickers]).sum(axis=1)
-    
-    # Calculate daily returns of the portfolio
-    portfolio_returns = portfolio_values.pct_change().dropna()
+    # Calculate portfolio returns as a weighted sum of individual stock returns
+    portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
     
     # Fit a GARCH(1,1) model to the portfolio returns
     model = arch_model(portfolio_returns, vol='Garch', p=1, q=1)
@@ -367,6 +361,15 @@ def garch(
     
     # Forecast the conditional volatility
     forecasted_volatility = model_fit.conditional_volatility
+
+    if market != "":
+        m_portfolio_returns = calculate_daily_returns(data[market])
+        m_model = arch_model(m_portfolio_returns, vol='Garch', p=1, q=1)
+        m_model_fit = m_model.fit(disp="off")
+        
+        # Forecast the conditional volatility
+        m_forecasted_volatility = m_model_fit.conditional_volatility
+
     
     if plot:
         # Plotting the conditional volatility with Plotly
@@ -376,9 +379,19 @@ def garch(
             x=forecasted_volatility.index,
             y=forecasted_volatility,
             mode='lines',
-            name='GARCH Volatility',
+            name='Portfolio',
             line=dict(color='orange', width=2)
         ))
+        
+        if market != "":
+            fig.add_trace(go.Scatter(
+            x=m_forecasted_volatility.index,
+            y=m_forecasted_volatility,
+            mode='lines',
+            name=market,
+            line=dict(color='green', width=2)
+        ))
+
 
         # Update layout
         fig.update_layout(
@@ -391,7 +404,10 @@ def garch(
 
         fig.show()
 
-    return forecasted_volatility
+    if market != "":
+        return forecasted_volatility, m_forecasted_volatility
+    else:
+        return forecasted_volatility
 
 def heatmap(
         data: pd.DataFrame,
@@ -465,7 +481,7 @@ def drawdown_plot(
         drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
         drawdown = drawdown * 100  # Convert to percentage
 
-        if market is not None:
+        if market != "":
             market_returns = calculate_daily_returns(data[market])
             cumulative_market_returns = (1 + market_returns).cumprod()
             cumulative_market_returns_max = cumulative_market_returns.cummax()
@@ -482,16 +498,16 @@ def drawdown_plot(
                 x=drawdown.index,
                 y=drawdown,
                 mode='lines',
-                name='Drawdown Portfolio',
+                name='Portfolio',
                 line=dict(color='orange', width=2)
             ))
 
-            if market is not None:
+            if market != "":
                 fig.add_trace(go.Scatter(
                     x=drawdown_market.index,
                     y=drawdown_market,
                     mode='lines',
-                    name='Drawdown Market',
+                    name=market,
                     line=dict(color='green', width=2)
                 ))
 
@@ -505,7 +521,10 @@ def drawdown_plot(
 
             fig.show()
 
-        return drawdown
+        if market != "":
+            return drawdown, drawdown_market
+        else:
+            return drawdown
 
 
 def probability_cone(
