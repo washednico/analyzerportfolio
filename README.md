@@ -91,6 +91,8 @@ ap.drawdown_plot(data, ticker, investments)
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/montecarlo.png?raw=true)
 ### Output Probability Cone 
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/prob_cone.png?raw=true)
+### Output Drawdown 
+![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/drawdown.png?raw=true)
 
 
 

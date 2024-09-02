@@ -435,6 +435,7 @@ def drawdown_plot(
         data: pd.DataFrame, 
         tickers: list[str], 
         investments: list[float], 
+        market: str = "",
         plot: bool = True) -> pd.DataFrame:
     
     """
@@ -444,6 +445,8 @@ def drawdown_plot(
     data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
     tickers (list): List of stock tickers.
     investments (list): Corresponding investment amounts for each ticker.
+    market (str): The market index to compare against (default is "" - None).
+    plot (bool): Whether to plot the results (default is True).
 
     Returns:
     pd.DataFrame: The drawdown of the portfolio as a percentage.
@@ -460,6 +463,17 @@ def drawdown_plot(
         cumulative_portfolio_returns_max = cumulative_portfolio_returns.cummax()
 
         drawdown = (cumulative_portfolio_returns - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
+        drawdown = drawdown * 100  # Convert to percentage
+
+        if market is not None:
+            market_returns = calculate_daily_returns(data[market])
+            cumulative_market_returns = (1 + market_returns).cumprod()
+            cumulative_market_returns_max = cumulative_market_returns.cummax()
+
+            drawdown_market = (cumulative_market_returns - cumulative_market_returns_max) / cumulative_market_returns_max
+            drawdown_market = drawdown_market * 100
+
+
 
         if plot:
             fig = go.Figure()
@@ -468,14 +482,23 @@ def drawdown_plot(
                 x=drawdown.index,
                 y=drawdown,
                 mode='lines',
-                name='Drawdown',
+                name='Drawdown Portfolio',
                 line=dict(color='orange', width=2)
             ))
+
+            if market is not None:
+                fig.add_trace(go.Scatter(
+                    x=drawdown_market.index,
+                    y=drawdown_market,
+                    mode='lines',
+                    name='Drawdown Market',
+                    line=dict(color='green', width=2)
+                ))
 
             fig.update_layout(
                 title="Drawdown",
                 xaxis_title="Date",
-                yaxis_title="Value ($)",
+                yaxis_title="Value (%)",
                 template="plotly_dark",
                 height=600
             )
