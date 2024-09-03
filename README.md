@@ -272,3 +272,19 @@ Remember, while these suggestions could help to optimize the portfolio, it's alw
 ## Contributions
 
 Contributions are welcome! Please submit pull requests or report issues via the GitHub repository.
+
+## Current requirements
+```text
+    install_requires=[
+        'openai>=1.43.0',
+        'pandas>=1.5.1',
+        'yfinance>=0.2.32',
+        'numpy==1.26.4',
+        'plotly>=5.18.0',
+        'arch>=7.0.0',
+        'scipy==1.14.0',
+        "statsmodels==0.14.1",
+    ]
+```
+We are currently forcing version of `numpy`, `statsmodel` and `scipy` due to compatibility issues.
+See more here https://github.com/statsmodels/statsmodels/issues/9333#issuecomment-2305438605
