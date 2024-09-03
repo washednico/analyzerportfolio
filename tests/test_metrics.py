@@ -12,7 +12,7 @@ from analyzerportfolio.metrics import (
 
 from analyzerportfolio.graphics import (
     compare_portfolio_to_market, 
-    simulate_pac, 
+    simulate_dca, 
     garch, 
     montecarlo, 
     heatmap, 
@@ -65,7 +65,7 @@ def test_everything():
     
     compare_portfolio_to_market(data, ticker, investments, market_ticker)
     garch(data, ticker, investments,market_ticker)
-    simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
+    simulate_dca(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
     montecarlo(data,ticker,investments,250,50,50,market_ticker)
     heatmap(data, ticker, market_ticker)
     probability_cone(data, ticker, investments,750)

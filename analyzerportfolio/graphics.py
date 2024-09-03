@@ -194,7 +194,7 @@ def compare_portfolio_to_market(
 
         return comparison_df
 
-def simulate_pac(
+def simulate_dca(
     data: pd.DataFrame,
     tickers: list[str],
     initial_investment: float,
@@ -204,7 +204,7 @@ def simulate_pac(
     plot: bool = True
 ) -> pd.DataFrame:
     """
-    Simulate a PAC (Piano di Accumulo) investment strategy and optionally plot the portfolio's growth over time.
+    Simulate a Dollar Cost Averaging investment strategy and optionally plot the portfolio's growth over time.
 
     Parameters:
     data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.

@@ -75,7 +75,7 @@ Analyst Info:  {'individual_suggestions': [{'ticker': 'AAPL', 'suggestion': 2.0}
 ```python
 ap.compare_portfolio_to_market(data, ticker, investments, market_ticker)
 ap.garch(data, ticker, investments,market_ticker)
-ap.simulate_pac(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
+ap.simulate_dca(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
 ap.montecarlo(data, ticker, investments, 250, 50, 50, market_ticker)
 ap.heatmap(data, ticker, market_ticker)
 ap.probability_cone(data, ticker, investments, 750)
@@ -85,7 +85,7 @@ ap.drawdown_plot(data, ticker, investments,market_ticker)
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/heatmap.png?raw=true)
 ### Output Portfolio vs Market  
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pfvsmkt.png?raw=true)
-### Output Simulate Pac 
+### Output Simulate DCA 
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pac.png?raw=true)
 ### Output Montecarlo 
 ![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/montecarlo.png?raw=true)
