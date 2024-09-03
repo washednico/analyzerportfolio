@@ -25,3 +25,5 @@ from .graphics import drawdown_plot
 from .ai import newsletter_report
 from .ai import get_suggestion
 from .ai import monitor_news
+
+from .optimization import markowitz_optimization

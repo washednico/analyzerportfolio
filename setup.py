@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='analyzerportfolio',
-    version='0.1.7',
+    version='0.1.91',
     author='Nicola Fochi, Leonardo Mario di Gennaro',
     author_email='portfolioanalyzer-devs@proton.me',
     description='A Python package for stock portfolio analysis and optimization.',
@@ -20,6 +20,7 @@ setup(
         'arch>=7.0.0',
         'scipy==1.14.0',
         "statsmodels==0.14.1",
+        "nbformat>=4.2.0"
     ],
 
     classifiers=[
