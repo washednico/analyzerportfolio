@@ -83,8 +83,3 @@ def test_everything():
 
     suggestion = get_suggestion(data, ticker, investments, openai_key)
     print(suggestion)
-
-
-
-
-

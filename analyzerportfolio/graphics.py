@@ -356,7 +356,7 @@ def garch(
     portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
     
     # Fit a GARCH(1,1) model to the portfolio returns
-    model = arch_model(portfolio_returns, vol='Garch', p=1, q=1)
+    model = arch_model(portfolio_returns, vol='Garch', p=1, q=1, rescale=False)
     model_fit = model.fit(disp="off")
     
     # Forecast the conditional volatility
@@ -364,7 +364,7 @@ def garch(
 
     if market != "":
         m_portfolio_returns = calculate_daily_returns(data[market])
-        m_model = arch_model(m_portfolio_returns, vol='Garch', p=1, q=1)
+        m_model = arch_model(m_portfolio_returns, vol='Garch', p=1, q=1, rescale=False)
         m_model_fit = m_model.fit(disp="off")
         
         # Forecast the conditional volatility
