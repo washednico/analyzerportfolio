@@ -18,7 +18,8 @@ setup(
         'numpy>=1.26.4',
         'plotly>=5.18.0',
         'arch>=7.0.0',
-        'scipy>=1.13.0'
+        'scipy>=1.13.0',
+        "statsmodels>=0.13.0",
     ],
 
     classifiers=[
