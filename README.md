@@ -82,19 +82,19 @@ ap.probability_cone(data, ticker, investments, 750)
 ap.drawdown_plot(data, ticker, investments,market_ticker)
 ```
 ### Output Heatmap  
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/heatmap.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/heatmap.png?raw=true)
 ### Output Portfolio vs Market  
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pfvsmkt.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/pfvsmkt.png?raw=true)
 ### Output Simulate DCA 
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/pac.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/pac.png?raw=true)
 ### Output Montecarlo 
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/montecarlo.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/montecarlo.png?raw=true)
 ### Output Probability Cone 
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/prob_cone.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/prob_cone.png?raw=true)
 ### Output Drawdown 
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/drawdown.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/drawdown.png?raw=true)
 ### Output Garch 
-![alt text](https://github.com/washednico/portfolioanalyzer/blob/main/img/garch.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/garch.png?raw=true)
 
 
 
