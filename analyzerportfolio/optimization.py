@@ -48,7 +48,7 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
         variance = np.dot(weights.T, np.dot(cov_matrix, weights))
         vol = np.sqrt(variance) * np.sqrt(252)
 
-        sharpe = returns-rf_rate/vol
+        sharpe = (returns-rf_rate) / vol
 
         downside_deviation = np.sqrt(np.mean(np.minimum(0, returns - rf_rate) ** 2))
         sortino_ratio = (returns - rf_rate) / downside_deviation
