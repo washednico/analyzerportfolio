@@ -100,13 +100,13 @@ ap.drawdown_plot(data, ticker, investments,market_ticker)
 
 ### Example: Portfolio Optimization
 ```python
-markowitz_portfolio = ap.markowitz_optimization(data, ticker, investments, method='sortino')
+markowitz_portfolio = ap.markowitz_optimization(data, ticker, investments, method='volatility')
 print("Optimal Weights:", markowitz_portfolio)
 ```
 
 ### Output Portfolio optimization
 ```text
-Optimal Weights: {'weights': [('AAPL', 0.1667), ('MSFT', 0.1667), ('GOOGL', 0.1667), ('AMZN', 0.1667), ('TSLA', 0.1667), ('E', 0.1667)], 'return': 0.3177235229590848, 'volatility': 0.2860601198632393}
+Optimal Weights: {'weights': [('AAPL', 0.1523), ('MSFT', 0.1773), ('GOOGL', 0.1333), ('AMZN', 0.168), ('TSLA', 0.0), ('E', 0.3691)], 'return': 0.23008349841981968, 'volatility': 0.2544446620192334}
 ```
 
 ### Example: News Monitor - AI

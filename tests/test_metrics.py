@@ -41,7 +41,7 @@ def test_everything():
     openai_key = ""
     
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
-    
+
     beta, alpha = calculate_beta_and_alpha(data, ticker, investments, market_ticker)
     sharpe_ratio = calculate_sharpe_ratio(data, ticker, investments, risk_free_rate)
     sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
@@ -70,13 +70,14 @@ def test_everything():
     heatmap(data, ticker, market_ticker)
     probability_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments, market_ticker)
-    monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
     
-    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'sortino')
+    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'volatility')
     print("\n   | Markowitz Optimal Portfolio |   ")
     print("Optimal Weights:", markowitz_portfolio)
     print( ' \n \n \n \n \n ')
-
+    
+    
+    monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
     report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
     print(report)
     print( ' \n \n \n \n \n ')
