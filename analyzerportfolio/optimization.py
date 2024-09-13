@@ -14,7 +14,7 @@ from analyzerportfolio.utils import (
     check_dataframe
 )
 
-def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: list[float], rf_rate: float = 0.0, plot: bool = True, method='sharpe', target=0.05):
+def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: list[float], rf_rate: float = 0.0, method='sharpe', target=0.05):
     """
     Perform Markowitz optimization to find the minimum variance portfolio and plot the efficient frontier.
 
@@ -23,7 +23,6 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
     tickers (list[str]): List of asset tickers in the portfolio.
     investments (list[float]): List of monetary investments for each asset.
     rf_rate (float): Indicating risk-free rate (default is 0.0).
-    plot (bool): Whether to plot the results (default is True).
     method (str): Optimization method to use (default is 'sharpe'). Accepted values: 'sharpe', 'variance', 'return', 'sortino', 'drawdown'.
     target (float): Target return for the portfolio (default is 0.05).
 
@@ -65,7 +64,7 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
     def minimize_max_drawdown(weights, data, tickers):
         investments = [x * 1000 for x in weights]
         max_drawdown = calculate_max_drawdown(data, tickers, investments)
-        return max_drawdown
+        return -max_drawdown
     
     def minimize_volatility(weights):
         return portfolio_performance(weights, mean_returns, covar_matrix)['volatility']
