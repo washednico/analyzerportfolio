@@ -6,7 +6,8 @@ from scipy import optimize
 from analyzerportfolio.metrics import (
     calculate_daily_returns,
     calculate_sharpe_ratio,
-    calculate_sortino_ratio
+    calculate_sortino_ratio,
+    calculate_max_drawdown
 )
 
 from analyzerportfolio.utils import (
@@ -23,7 +24,7 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
     investments (list[float]): List of monetary investments for each asset.
     rf_rate (float): Indicating risk-free rate (default is 0.0).
     plot (bool): Whether to plot the results (default is True).
-    method (str): Optimization method to use (default is 'sharpe'). Accepted values: 'sharpe', 'variance', 'return', 'sortino'.
+    method (str): Optimization method to use (default is 'sharpe'). Accepted values: 'sharpe', 'variance', 'return', 'sortino', 'drawdown'.
     target (float): Target return for the portfolio (default is 0.05).
 
     Returns:
@@ -52,20 +53,26 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
         }
 
     def minimize_sharpe(weights, data, tickers, rf_rate):
-        investments = weights * 1000
+        investments = [x * 1000 for x in weights]
         sharpe = calculate_sharpe_ratio(data, tickers, investments, rf_rate)
         return -sharpe
 
     def minimize_sortino(weights, data, tickers, rf_rate, target_return=0.0):
-        investments = weights * 1000
+        investments = [x * 1000 for x in weights]
         sortino = calculate_sortino_ratio(data, tickers, investments, target_return, rf_rate)
         return -sortino
 
+    def minimize_max_drawdown(weights, data, tickers):
+        investments = [x * 1000 for x in weights]
+        max_drawdown = calculate_max_drawdown(data, tickers, investments)
+        return max_drawdown
+    
     def minimize_volatility(weights):
         return portfolio_performance(weights, mean_returns, covar_matrix)['volatility']
 
     def minimize_return(weights):
         return -portfolio_performance(weights, mean_returns, covar_matrix)['return']
+    
 
     def optimize_portfolio(minimize_func, initializer, bounds, constraints, *args):
         """
@@ -107,11 +114,14 @@ def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: 
         bounds = tuple((0, 1) for x in range(num_assets))
         initializer = num_assets * [1. / num_assets, ]
 
-        if method == 'sharpe':
-            return optimize_portfolio(minimize_sharpe, initializer, bounds, constraints, data, tickers, rf_rate)
-        elif method == 'variance':
+    
+        if method == 'variance':
             return optimize_portfolio(minimize_volatility, initializer, bounds, constraints)
         elif method == 'return':
             return optimize_portfolio(minimize_return, initializer, bounds, constraints)
         elif method == 'sortino':
             return optimize_portfolio(minimize_sortino, initializer, bounds, constraints, data, tickers, rf_rate, target)
+        elif method == 'drawdown':
+            return optimize_portfolio(minimize_max_drawdown, initializer, bounds, constraints, data, tickers)
+        elif method == 'sharpe':
+            return optimize_portfolio(minimize_sharpe, initializer, bounds, constraints, data, tickers, rf_rate)

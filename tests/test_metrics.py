@@ -74,7 +74,7 @@ def test_everything():
     plot_distribution_returns(data, ticker, investments, window=25)
 
     
-    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'volatility')
+    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'drawdown')
     print("\n   | Markowitz Optimal Portfolio |   ")
     print("Optimal Weights:", markowitz_portfolio)
     print( ' \n \n \n \n \n ')
