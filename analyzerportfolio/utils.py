@@ -88,27 +88,6 @@ def get_current_rate(base_currency, quote_currency):
     exchange_rate_data = yf.download(exchange_rate_ticker, period='1d', start ="2024-01-01", end=None)['Adj Close'].iloc[-1]
     return exchange_rate_data
 
-def check_dataframe(data: pd.DataFrame, tickers: list[str], investments:list[float] = None, market_ticker:str = None) -> bool:
-    """
-    Check if necessary variables exist in the provided data
-    """
-    #Ensure there is a position in all tickers
-    if investments is not None:
-        if len(tickers) != len(investments):
-            raise ValueError("The number of tickers must match the number of investments.")
-
-    # Ensure the market index is in the DataFrame (OPTIONAL)
-    if market_ticker is not None:
-        if market_ticker not in data.columns:
-            raise ValueError(f"Market index '{market_ticker}' not found in the provided data.")
-    
-    # Ensure all tickers are in the DataFrame
-    missing_tickers = [ticker for ticker in tickers if ticker not in data.columns]
-    if [ticker for ticker in tickers if ticker not in data.columns]:
-        raise ValueError(f"Tickers {missing_tickers} not found in the provided data.")
-    
-    return True
-
 
 def forming_portfolio(
     data: pd.DataFrame,
