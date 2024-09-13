@@ -80,6 +80,7 @@ ap.montecarlo(data, ticker, investments, 250, 50, 50, market_ticker)
 ap.heatmap(data, ticker, market_ticker)
 ap.probability_cone(data, ticker, investments, 750)
 ap.drawdown_plot(data, ticker, investments,market_ticker)
+ap.plot_distribution_returns(data, ticker, investments, window=25)
 ```
 ### Output Heatmap  
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/heatmap.png?raw=true)
@@ -95,6 +96,8 @@ ap.drawdown_plot(data, ticker, investments,market_ticker)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/drawdown.png?raw=true)
 ### Output Garch 
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/garch.png?raw=true)
+### Output Distribution Returns 
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/distribution.png?raw=true)
 
 
 

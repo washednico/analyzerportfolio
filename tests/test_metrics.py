@@ -17,7 +17,8 @@ from analyzerportfolio.graphics import (
     montecarlo, 
     heatmap, 
     probability_cone, 
-    drawdown_plot
+    drawdown_plot,
+    plot_distribution_returns
 )
 
 from analyzerportfolio.optimization import (
@@ -70,6 +71,8 @@ def test_everything():
     heatmap(data, ticker, market_ticker)
     probability_cone(data, ticker, investments,750)
     drawdown_plot(data, ticker, investments, market_ticker)
+    plot_distribution_returns(data, ticker, investments, window=25)
+
     
     markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'volatility')
     print("\n   | Markowitz Optimal Portfolio |   ")
@@ -77,7 +80,7 @@ def test_everything():
     print( ' \n \n \n \n \n ')
     
     
-    monitor_news(ticker,delay = 60,loop_forever=True, openai_key=openai_key)
+    monitor_news(ticker,delay = 60,loop_forever=False, openai_key=openai_key)
     report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
     print(report)
     print( ' \n \n \n \n \n ')

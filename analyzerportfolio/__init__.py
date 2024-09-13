@@ -21,6 +21,7 @@ from .graphics import montecarlo
 from .graphics import heatmap
 from .graphics import probability_cone
 from .graphics import drawdown_plot
+from .graphics import plot_distribution_returns
 
 from .ai import newsletter_report
 from .ai import get_suggestion

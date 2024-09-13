@@ -643,3 +643,97 @@ def probability_cone(
         fig.show()
 
     return probability_cone_df
+
+
+def plot_distribution_returns(
+    data: pd.DataFrame,
+    tickers: list[str],
+    investments: list[float],
+    window: int = 1,
+    bins: int = 100,
+    plot: bool = True
+) -> pd.DataFrame:
+    """
+    Plot the distribution of portfolio returns over a specified time interval.
+
+    Parameters:
+    data (pd.DataFrame): DataFrame containing adjusted prices for all tickers.
+    tickers (list[str]): List of stock tickers in the portfolio.
+    investments (list[float]): List of USD amounts invested in each stock.
+    window (int): Number of periods over which to calculate returns (default is 1 for daily returns).
+    bins (int): Number of bins for the histogram (default is 100).
+    plot (bool): Whether to plot the distribution returns (default is True).
+
+    Returns:
+    pd.DataFrame: A DataFrame containing the portfolio returns.
+    """
+
+    if check_dataframe(data, tickers, investments):
+
+        # Calculate returns over the specified window
+        stock_returns = data[tickers].pct_change(window).dropna()
+
+        # Calculate portfolio returns as a weighted sum of individual stock returns
+        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+
+        if plot:            
+
+            import plotly.graph_objects as go
+            import numpy as np
+            from scipy.stats import norm
+
+            # Calculate the mean and standard deviation
+            mu = portfolio_returns.mean()
+            sigma = portfolio_returns.std()
+
+
+            # Create the histogram with probability density normalization
+            fig = go.Figure()
+
+            # Add the histogram trace with solid orange bars and solid white border
+            fig.add_trace(go.Histogram(
+                x=portfolio_returns,
+                nbinsx=bins,
+                histnorm='probability density',  # Normalizes histogram so area under histogram equals 1
+                marker=dict(
+                    color='orange',
+                    line=dict(
+                        color='black',
+                        width=1
+                    )
+                ),
+                opacity=1.0,
+                name='Portfolio Returns'
+            ))
+
+            # Generate data for the normal distribution curve
+            x = np.linspace(portfolio_returns.min(), portfolio_returns.max(), 1000)
+            y = norm.pdf(x, mu, sigma)
+
+            # Add the normal distribution curve in green
+            fig.add_trace(go.Scatter(
+                x=x,
+                y=y,
+                mode='lines',
+                name='Normal Distribution',
+                line=dict(color='green', width=2)
+            ))
+
+            # Update layout to make the plot visually appealing
+            fig.update_layout(
+                title="Distribution of Portfolio Returns",
+                template="plotly_dark",
+                height=600,
+                xaxis=dict(
+                    title=f"{window}-Day Returns",
+                    tickformat='.2%',  # Formats the x-axis ticks as percentages
+                    showgrid=True,
+                    zeroline=True
+                ),
+                yaxis_title="Probability Density",
+                bargap=0.02  # Adjusts the gap between bars
+            )
+
+            fig.show()
+        
+        return portfolio_returns
