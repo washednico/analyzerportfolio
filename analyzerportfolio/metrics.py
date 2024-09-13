@@ -77,14 +77,12 @@ def calculate_portfolio_returns(investments:list[float], stock_returns:pd.DataFr
 
     return portfolio_returns.dropna()
 
-def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_ticker: str, risk_free_rate: float = 0.01) -> tuple:
+def calculate_beta_and_alpha(portfolio_returns: pd.DataFrame, market_returns: pd.DataFrame, risk_free_rate: float = 0.01) -> tuple:
     """
     Calculate the beta and alpha of a portfolio using monetary investments.
 
     Parameters:
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers and the market index.
-    tickers (list): List of stock tickers in the portfolio.
-    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
+    portfolio (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers and the market index.
     market_ticker (str): The market index to compare against (e.g., S&P 500).
     risk_free_rate (float): The risk-free rate to use in the alpha calculation (default is 1%).
 
@@ -92,32 +90,23 @@ def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments
     tuple: A tuple containing the beta and alpha of the portfolio.
     """
 
-    if check_dataframe(data, tickers, investments, market_ticker):
+    # Convert the annual risk-free rate to a daily rate
+    daily_risk_free_rate = (1 + risk_free_rate) ** (1/252) - 1
 
-        # Calculate daily market and stock returns
-        market_returns = calculate_daily_returns(data[market_ticker])
-        stock_returns = calculate_daily_returns(data[tickers])
+    # Excess returns
+    excess_portfolio_returns = portfolio_returns.tail(-1) - daily_risk_free_rate
+    excess_market_returns = market_returns.tail(-1) - daily_risk_free_rate
 
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+    # Add a constant for the intercept in the regression model
+    X = sm.add_constant(excess_market_returns)
 
-        # Convert the annual risk-free rate to a daily rate
-        daily_risk_free_rate = (1 + risk_free_rate) ** (1/252) - 1
+    # Perform linear regression to find alpha and beta
+    model = sm.OLS(excess_portfolio_returns, X).fit()
+    alpha = model.params['const']
+    beta = model.params[market_returns.name]
+    annualized_alpha = (1 + alpha) ** 252 - 1
 
-        # Excess returns
-        excess_portfolio_returns = portfolio_returns - daily_risk_free_rate
-        excess_market_returns = market_returns - daily_risk_free_rate
-
-        # Add a constant for the intercept in the regression model
-        X = sm.add_constant(excess_market_returns)
-
-        # Perform linear regression to find alpha and beta
-        model = sm.OLS(excess_portfolio_returns, X).fit()
-        alpha = model.params['const']
-        beta = model.params[market_returns.name]
-        annualized_alpha = (1 + alpha) ** 252 - 1
-
-        return beta, annualized_alpha
+    return beta, annualized_alpha
 
 def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], risk_free_rate: float = 0.01) -> float:
     """

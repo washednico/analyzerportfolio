@@ -117,82 +117,7 @@ def montecarlo(
 
         return portfolio_sim_df, market_sim_df
 
-def compare_portfolio_to_market(
-    data: pd.DataFrame,
-    tickers: list[str],
-    investments: list[float],
-    market_index: str,
-    plot: bool = True
-) -> pd.DataFrame:
-    """
-    Compare the portfolio's return with the market's return and optionally plot the comparison.
 
-    Parameters:
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers and the market index.
-    tickers (list[str]): List of stock tickers in the portfolio.
-    investments (list[float]): Corresponding investment amounts for each ticker.
-    market_index (str): The market index to compare against.
-    plot (bool): Whether to plot the results (default is True).
-
-    Returns:
-    pd.DataFrame: A DataFrame with the cumulative returns of both the portfolio and the market index.
-    """
-    
-    if check_dataframe(data, tickers, investments, market_index):
-        # Calculate the total portfolio value
-        total_investment = sum(investments)
-    
-        #Calculate market and stocks daily returns
-        market_returns = calculate_daily_returns(data[market_index])
-        stock_returns = calculate_daily_returns(data[tickers])
-
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
-    
-        # Calculate cumulative returns
-        portfolio_cumulative_return = (1 + portfolio_returns).cumprod() * total_investment
-        market_cumulative_return = (1 + market_returns).cumprod() * total_investment
-        
-        # Combine results into a DataFrame for easier analysis
-        comparison_df = pd.DataFrame({
-            'Portfolio': portfolio_cumulative_return,
-            f'{market_index}': market_cumulative_return
-        })
-
-        if plot:
-            # Plot the cumulative returns
-            fig = go.Figure()
-
-            # Plot portfolio cumulative returns
-            fig.add_trace(go.Scatter(
-                x=portfolio_cumulative_return.index,
-                y=portfolio_cumulative_return,
-                mode='lines',
-                name='Portfolio',
-                line=dict(color='orange')
-            ))
-
-            # Plot market cumulative returns
-            fig.add_trace(go.Scatter(
-                x=market_cumulative_return.index,
-                y=market_cumulative_return,
-                mode='lines',
-                name=f'{market_index}',
-                line=dict(color='green')
-            ))
-
-            # Update layout
-            fig.update_layout(
-                title="Portfolio vs Market Performance",
-                xaxis_title="Date",
-                yaxis_title="Value",
-                template="plotly_dark",
-                height=600
-            )
-
-            fig.show()
-
-        return comparison_df
 
 def simulate_dca(
     data: pd.DataFrame,
@@ -737,3 +662,59 @@ def plot_distribution_returns(
             fig.show()
         
         return portfolio_returns
+    
+
+def compare_portfolio_to_market(
+    portfolio_value: pd.DataFrame,
+    market_value: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Compare the portfolio's return with the market's return and optionally plot the comparison.
+
+    Parameters:
+    portfolio_value (pd.DataFrame): DataFrame containing adjusted values of portfolio price at close.
+    market_value (str): The market index to compare against.
+
+    Returns:
+    pd.DataFrame: A DataFrame with the cumulative returns of both the portfolio and the market index.
+    """
+    
+    comparison_df = pd.DataFrame({
+        'Portfolio': portfolio_value,
+        f'Market': market_value
+    })
+
+    
+    # Plot the cumulative returns
+    fig = go.Figure()
+
+    # Plot portfolio cumulative returns
+    fig.add_trace(go.Scatter(
+        x=portfolio_value.index,
+        y=portfolio_value,
+        mode='lines',
+        name='Portfolio',
+        line=dict(color='orange')
+    ))
+
+    # Plot market cumulative returns
+    fig.add_trace(go.Scatter(
+        x=market_value.index,
+        y=market_value,
+        mode='lines',
+        name=f'Market',
+        line=dict(color='green')
+    ))
+
+    # Update layout
+    fig.update_layout(
+        title="Portfolio vs Market Performance",
+        xaxis_title="Date",
+        yaxis_title="Value",
+        template="plotly_dark",
+        height=600
+    )
+
+    fig.show()
+
+    return comparison_df

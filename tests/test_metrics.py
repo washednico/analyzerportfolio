@@ -31,6 +31,10 @@ from analyzerportfolio.ai import (
     monitor_news
 )
 
+from analyzerportfolio.utils import (
+    forming_portfolio
+)
+
 def test_everything():
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
     investments = [100,200,300,300,200,500]
@@ -42,8 +46,12 @@ def test_everything():
     openai_key = ""
     
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
+    portfolio_df = forming_portfolio(data, ticker, investments, market_ticker=market_ticker, rebalancing_period_days=250)
 
-    beta, alpha = calculate_beta_and_alpha(data, ticker, investments, market_ticker)
+    beta, alpha = calculate_beta_and_alpha(portfolio_df["Portfolio_Returns"], portfolio_df["Market_Returns"])
+    compare_portfolio_to_market(portfolio_df["Portfolio_Value"], portfolio_df["Market_Value"])
+
+
     sharpe_ratio = calculate_sharpe_ratio(data, ticker, investments, risk_free_rate)
     sortino_ratio = calculate_sortino_ratio(data, ticker, investments, risk_free_rate)
     var = calculate_var(data, ticker, investments)
@@ -63,27 +71,30 @@ def test_everything():
     print("Max Drawdown: ", max_drawdown)
     print("Portfolio Scenarios: ", portfolio_scenarios)
     print("Analyst Info: ", analyst_info)
-    
-    compare_portfolio_to_market(data, ticker, investments, market_ticker)
-    garch(data, ticker, investments,market_ticker)
-    simulate_dca(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
-    montecarlo(data,ticker,investments,250,50,50,market_ticker)
-    heatmap(data, ticker, market_ticker)
-    probability_cone(data, ticker, investments,750)
-    drawdown_plot(data, ticker, investments, market_ticker)
-    plot_distribution_returns(data, ticker, investments, window=25)
 
     
-    markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'drawdown')
-    print("\n   | Markowitz Optimal Portfolio |   ")
-    print("Optimal Weights:", markowitz_portfolio)
-    print( ' \n \n \n \n \n ')
-    
-    
-    monitor_news(ticker,delay = 60,loop_forever=False, openai_key=openai_key)
-    report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
-    print(report)
-    print( ' \n \n \n \n \n ')
 
-    suggestion = get_suggestion(data, ticker, investments, openai_key)
-    print(suggestion)
+    if False:
+        compare_portfolio_to_market(data, ticker, investments, market_ticker)
+        garch(data, ticker, investments,market_ticker)
+        simulate_dca(data, ticker, 1000, 100, 30, [0.2, 0.2, 0.2, 0.2, 0.1, 0.1])
+        montecarlo(data,ticker,investments,250,50,50,market_ticker)
+        heatmap(data, ticker, market_ticker)
+        probability_cone(data, ticker, investments,750)
+        drawdown_plot(data, ticker, investments, market_ticker)
+        plot_distribution_returns(data, ticker, investments, window=25)
+
+        
+        markowitz_portfolio = markowitz_optimization(data, ticker, investments, method = 'drawdown')
+        print("\n   | Markowitz Optimal Portfolio |   ")
+        print("Optimal Weights:", markowitz_portfolio)
+        print( ' \n \n \n \n \n ')
+        
+        
+        monitor_news(ticker,delay = 60,loop_forever=False, openai_key=openai_key)
+        report = newsletter_report(data,ticker,investments,start_date_report="2024-08-01",openai_key=openai_key)
+        print(report)
+        print( ' \n \n \n \n \n ')
+
+        suggestion = get_suggestion(data, ticker, investments, openai_key)
+        print(suggestion)
