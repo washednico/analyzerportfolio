@@ -1,17 +1,10 @@
 from analyzerportfolio.metrics import (
-    calculate_beta_and_alpha, 
-    download_data
+    calculate_beta_and_alpha
     )
 
-from analyzerportfolio.graphics import (
-    compare_portfolio_to_market, 
-    plot_distribution_returns
-)
-
-
-
 from analyzerportfolio.utils import (
-    forming_portfolio
+    download_data,
+    create_portfolio
 )
 
 def test_everything():
@@ -24,11 +17,11 @@ def test_everything():
     base_currency = 'EUR'
     
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
-    portfolio_df = forming_portfolio(data, ticker, investments, market_ticker=market_ticker, rebalancing_period_days=250)
+    portfolio_df = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", rebalancing_period_days=250)
 
-    beta, alpha = calculate_beta_and_alpha(portfolio_df["Portfolio_Returns"], portfolio_df["Market_Returns"])
-    compare_portfolio_to_market(portfolio_df["Portfolio_Value"], portfolio_df["Market_Value"])
-    plot_distribution_returns(portfolio_df["Portfolio_Returns"])
+    beta, alpha = calculate_beta_and_alpha(portfolio_df)
+    
+    print(beta, alpha)
 
 
 

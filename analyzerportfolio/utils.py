@@ -89,11 +89,57 @@ def get_current_rate(base_currency, quote_currency):
     return exchange_rate_data
 
 
-def forming_portfolio(
+def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str, use_cache: bool = False) -> pd.DataFrame:
+    """
+    Download stock and market data, convert to base currency, and return the processed data.
+    
+    Parameters:
+    tickers (list): List of stock tickers.
+    market_ticker (str): Market index ticker.
+    start_date (str): Start date for historical data.
+    end_date (str): End date for historical data.
+    base_currency (str): The base currency for the portfolio (e.g., 'USD').
+    use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False.
+
+    Returns:
+    pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
+    """
+
+    #TO DO, CHECK CACHE
+    exchange_rate_cache = {}
+    stock_data = pd.DataFrame()
+    
+    # Fetch and process each stock's data
+    for ticker in tickers:
+        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+        currency = get_currency(ticker)
+        if currency != base_currency:
+            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
+            data = convert_to_base_currency(data, exchange_rate)
+        stock_data[ticker] = data
+    
+    # Fetch and process market index data
+    market_data = yf.download(market_ticker, start=start_date, end=end_date)['Adj Close']
+    market_currency = get_currency(market_ticker)
+    if market_currency != base_currency:
+        exchange_rate = get_exchange_rate(base_currency, market_currency, start_date, end_date, exchange_rate_cache)
+        market_data = convert_to_base_currency(market_data, exchange_rate)
+    
+    # Add market data to stock data
+    stock_data[market_ticker] = market_data
+    
+    # Drop rows with missing data to ensure alignment
+    stock_data = stock_data.dropna()
+    
+    return stock_data
+
+
+def create_portfolio(
     data: pd.DataFrame,
     tickers : list[str],
     investments : list[float],
     market_ticker: str,
+    name_portfolio: str,
     return_period_days : int = 1,
     rebalancing_period_days: int = None,
     target_weights: list[float] = None
@@ -107,7 +153,8 @@ def forming_portfolio(
     - data: DataFrame with adjusted closing prices (index as dates, columns as tickers).
     - tickers: List of stock tickers in the portfolio.
     - investments: List or array of initial investments for each stock.
-     - market_ticker: String representing the market index ticker.
+    - market_ticker: String representing the market index ticker.
+    - name_portfolio: String representing the name of the portfolio
     - return_period_days: Integer representing the return period in days. Default is 1.
     - rebalancing_period_days: Optional integer representing the rebalancing period in days.
                                If None, no rebalancing is performed.
@@ -178,7 +225,6 @@ def forming_portfolio(
     returns_df['Portfolio_Value'] = portfolio_values
 
     # ----- Portfolio With Auto-Rebalancing (if rebalancing_period_days is provided) -----
-
     if rebalancing_period_days is not None:
         # Initialize Series to store portfolio values with rebalancing
         rebalanced_portfolio_values = pd.Series(index=stock_data.index, dtype=float)
@@ -210,10 +256,10 @@ def forming_portfolio(
 
         # Calculate returns of the rebalanced portfolio over the specified return period
         rebalanced_portfolio_returns = rebalanced_portfolio_values.pct_change(return_period_days)
-
+        
         # Add rebalanced portfolio returns and values to the DataFrame
-        returns_df['Rebalanced_Portfolio_Returns'] = rebalanced_portfolio_returns
-        returns_df['Rebalanced_Portfolio_Value'] = rebalanced_portfolio_values
+        returns_df['Portfolio_Returns'] = rebalanced_portfolio_returns
+        returns_df['Portfolio_Value'] = rebalanced_portfolio_values
 
         # Add rebalanced stock values to the DataFrame
         for ticker in tickers:
@@ -240,4 +286,20 @@ def forming_portfolio(
     # Drop rows with all NaN values (if any)
     returns_df.notna()
 
-    return returns_df
+    portfolio_returns = {
+        "name": name_portfolio,
+        "auto_rebalance" : rebalancing_period_days,
+        "tickers": tickers,
+        "investments": investments,
+        "returns": returns_df,
+        "market_ticker": market_ticker,
+        "return_period_days": return_period_days,
+        "market_returns" : returns_df["Market_Returns"],
+        "market_values" : returns_df["Market_Value"],
+        "portfolio_returns" : returns_df["Portfolio_Returns"],
+        "portfolio_values" : returns_df["Portfolio_Value"],
+    }
+
+    
+
+    return portfolio_returns
