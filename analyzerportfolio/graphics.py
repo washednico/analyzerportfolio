@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.io as pio
 from arch import arch_model
 from scipy.stats import norm
-from typing import Union, List
+from typing import Union, List, Dict
 
 
 # Set plotly template
@@ -103,8 +103,7 @@ def portfolio_value(
         title="Portfolio(s) vs Market Performance",
         xaxis_title="Date",
         yaxis_title="Portfolio Value",
-        template="plotly_dark",
-        height=600
+        template="plotly_dark"
     )
 
     # Display the plot
@@ -236,11 +235,80 @@ def garch(
         title="Comparison of GARCH Volatilities",
         xaxis_title="Date",
         yaxis_title="Volatility",
-        template="plotly_dark",
-        height=600
+        template="plotly_dark"
     )
 
     # Display the plot
     fig.show()
 
     return volatility_df
+
+def montecarlo(
+    portfolios: Union[dict, List[dict]],
+    simulation_length: int,
+    num_simulations: int = 100,
+    plot: bool = True
+) -> Dict[str, pd.DataFrame]:
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    simulation_results = {}
+    if len(portfolios) == 0:
+        raise ValueError("At least one portfolio must be provided.")
+    
+    days_per_step = portfolios[0]["return_period_days"]
+    market_returns = portfolios[0].get('market_returns', None)
+    market_name = portfolios[0].get('market_ticker', 'Market')
+    total_investment = sum(portfolios[0]['investments'])
+
+    def run_monte_carlo(returns_series: pd.Series, num_simulations: int, simulation_length: int, initial_value: float) -> pd.DataFrame:
+        mean_return = returns_series.mean()
+        std_dev_return = returns_series.std()
+        simulation_results = np.zeros((simulation_length + 1, num_simulations))
+        simulation_results[0, :] = initial_value
+        for sim in range(num_simulations):
+            random_returns = np.random.normal(mean_return, std_dev_return, simulation_length)
+            cumulative_returns = np.cumprod(1 + random_returns)
+            simulation_results[1:, sim] = initial_value * cumulative_returns
+        return pd.DataFrame(simulation_results)
+
+    for portfolio in portfolios:
+        name = portfolio['name']
+        investments = portfolio['investments']
+        portfolio_returns = portfolio['portfolio_returns'].dropna()
+        initial_value = sum(investments)
+        sim_df = run_monte_carlo(portfolio_returns, num_simulations, simulation_length, initial_value)
+        simulation_results[name] = sim_df
+
+    if market_returns is not None:
+        market_returns = market_returns.dropna()
+        market_sim_df = run_monte_carlo(market_returns, num_simulations, simulation_length, total_investment)
+        simulation_results[market_name] = market_sim_df
+
+    if plot:
+        num_plots = len(simulation_results)
+        num_cols = 2
+        num_rows = -(-num_plots // num_cols)  
+        fig = make_subplots(rows=num_rows, cols=num_cols)
+
+        plot_index = 0
+        for name, sim_df in simulation_results.items():
+            plot_index += 1
+            row = (plot_index - 1) // num_cols + 1
+            col = (plot_index - 1) % num_cols + 1
+            for i in range(num_simulations):
+                fig.add_trace(
+                    go.Scatter(x=np.arange(simulation_length + 1), y=sim_df.iloc[:, i], mode='lines', line=dict(width=1), showlegend=False),
+                    row=row, col=col
+                ) 
+
+            xref = f'x{plot_index}' if plot_index != 1 else 'x'
+            yref = f'y{plot_index}' if plot_index != 1 else 'y'
+            fig.add_annotation(text=f"{name} - Max: {sim_df.iloc[-1].max():.2f} Avg: {sim_df.iloc[-1].mean():.2f} Med: {sim_df.iloc[-1].median():.2f} Min: {sim_df.iloc[-1].min():.2f}",
+                               xref=f"{xref} domain", yref=f"{yref} domain", x=0.1, y=1.05, showarrow=False, row=row, col=col)
+            
+
+        fig.update_layout(title_text="Monte Carlo Simulations - Simulation length: "+str(simulation_length)+" (Days x Step: "+str(days_per_step)+") - Simuluations per portfolio: "+str(num_simulations), template="plotly_dark")
+        fig.show()
+
+    return simulation_results

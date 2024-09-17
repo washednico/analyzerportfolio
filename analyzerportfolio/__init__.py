@@ -12,4 +12,5 @@ from .metrics import calc_sortino
 
 from .graphics import portfolio_value
 from .graphics import garch
+from .graphics import montecarlo
 
