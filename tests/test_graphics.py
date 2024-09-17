@@ -1,7 +1,8 @@
 from analyzerportfolio.graphics import (
     portfolio_value,
     garch,
-    montecarlo
+    montecarlo,
+    drawdown
     )
 
 from analyzerportfolio.utils import (
@@ -42,6 +43,9 @@ def test_everything():
 
     montecarlo(portfolio_1, simulation_length=1000)
     montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
+    
+    drawdown(portfolio_1)
+    drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
     
 
 

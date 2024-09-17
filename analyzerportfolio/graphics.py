@@ -114,7 +114,8 @@ def portfolio_value(
 def garch(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
-    market_color: str = 'green'
+    market_color: str = 'green',
+    plot: bool = True
 ) -> pd.DataFrame:
     """
     Compare the GARCH volatilities of one or multiple portfolios and plot the comparison.
@@ -125,6 +126,7 @@ def garch(
       created from the create_portfolio function.
     - colors (str or list[str], optional): Color or list of colors for each portfolio plot line.
     - market_color (str, optional): Color for the market volatility plot line (default is 'green').
+    - plot (bool, optional): Whether to plot the results (default is True).
 
     Returns:
     - pd.DataFrame: A DataFrame with the GARCH volatilities of all portfolios (divided by 100).
@@ -239,7 +241,8 @@ def garch(
     )
 
     # Display the plot
-    fig.show()
+    if plot:
+        fig.show()
 
     return volatility_df
 
@@ -312,3 +315,82 @@ def montecarlo(
         fig.show()
 
     return simulation_results
+
+
+def drawdown(portfolios: Union[str, List[str]],
+             plot: bool = True, 
+             colors: Union[str, List[str]] = None,
+            market_color: str = 'green',) -> pd.DataFrame:
+    """
+    Plot drawdown of multiple portfolios using their portfolio values and optionally plot market drawdown.
+
+    Parameters:
+    - portfolios (list[dict]): List of portfolio dictionaries containing 'name' and 'portfolio_value'.
+      Optionally, the first portfolio can contain 'market_value' for market drawdown comparison.
+    - plot (bool): Whether to plot the results (default is True).
+
+    Returns:
+    - pd.DataFrame: DataFrame containing the drawdown series for each portfolio and optionally for the market.
+    """
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    if len(portfolios) == 0:
+        raise ValueError("At least one portfolio must be provided.")
+    
+     # Ensure colors is a list
+    if colors is None:
+        colors = [None] * len(portfolios)
+    elif isinstance(colors, str):
+        colors = [colors]
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        raise ValueError("Invalid type for 'colors' parameter.")
+    
+    def calculate_drawdown(values):
+        """Calculate drawdowns given a series of portfolio values."""
+        peak = values.cummax()
+        drawdown = (values - peak) / peak
+        return drawdown * 100  # convert to percentage
+    
+    fig = go.Figure()
+    drawdown_data = {}
+
+    for portfolio, color in zip(portfolios,colors):
+        portfolio_name = portfolio['name']
+        portfolio_value = portfolio['portfolio_value']
+        drawdown = calculate_drawdown(portfolio_value)
+        drawdown_data[portfolio_name] = drawdown
+
+        # Add portfolio drawdown trace to the plot
+        fig.add_trace(go.Scatter(
+            x=drawdown.index,
+            y=drawdown,
+            mode='lines',
+            name=f"{portfolio_name} (Max DD: {drawdown.min():.2f}%)",
+            line=dict(color=color) if color else {}
+        ))
+
+        
+    market_drawdown = calculate_drawdown(portfolios[0]['market_value'])
+    drawdown_data['Market'] = market_drawdown
+    fig.add_trace(go.Scatter(
+        x=market_drawdown.index,
+        y=market_drawdown,
+        mode='lines',
+        name=f"Market (Max DD: {market_drawdown.min():.2f}%)",
+        line=dict(color=market_color, width=2)
+    ))
+
+    if plot:
+        fig.update_layout(
+            title="Portfolio Drawdown Comparison",
+            xaxis_title="Date",
+            yaxis_title="Drawdown (%)",
+            template="plotly_dark"
+        )
+        fig.show()
+
+    return pd.DataFrame(drawdown_data)
