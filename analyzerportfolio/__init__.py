@@ -5,6 +5,6 @@ from .utils import get_current_rate
 from .utils import download_data
 from .utils import create_portfolio
 
-from .metrics import calculate_beta_and_alpha
+from .metrics import calc_beta
 
 

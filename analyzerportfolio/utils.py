@@ -2,6 +2,8 @@ import yfinance as yf
 import pandas as pd
 import logging
 import numpy as np
+import requests
+from io import StringIO
 
 def get_currency(ticker):
     """Fetch the currency of the given ticker using yfinance."""
@@ -89,7 +91,7 @@ def get_current_rate(base_currency, quote_currency):
     return exchange_rate_data
 
 
-def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str, use_cache: bool = False) -> pd.DataFrame:
+def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str,risk_free: str = "PCREDIT8", use_cache: bool = False) -> pd.DataFrame:
     """
     Download stock and market data, convert to base currency, and return the processed data.
     
@@ -99,7 +101,8 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     start_date (str): Start date for historical data.
     end_date (str): End date for historical data.
     base_currency (str): The base currency for the portfolio (e.g., 'USD').
-    use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False.
+    risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'PCREDIT8' for USD).
+    use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. FOR FUTURE IMPLEMENTATION
 
     Returns:
     pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
@@ -127,11 +130,43 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     
     # Add market data to stock data
     stock_data[market_ticker] = market_data
+
+
+    # Make a request to the specified URL
+    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="+risk_free+"&cosd="+start_date+"&coed="+end_date+"&fq=Daily%2C%207-Day&fam=avg"
+    response = requests.get(url)
+
+
+    if response.status_code == 200:
+        # Get the CSV data from the response
+        csv_data = response.text
+        interest_data = pd.read_csv(
+            StringIO(csv_data)
+        ).rename(columns={"DATE": "Date", risk_free: "Interest_Rates"})
+
+        # Convert 'Date' to datetime and set as index
+        interest_data['Date'] = pd.to_datetime(interest_data['Date'])
+        interest_data.set_index('Date', inplace=True)
+
+        # Ensure 'stock_data' index is datetime and aligned
+        stock_data.index = pd.to_datetime(stock_data.index)
+
+        # Reindex 'interest_data' to match 'stock_data' dates
+        interest_data = interest_data.reindex(stock_data.index)
+
+        # Forward-fill missing interest rates
+        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].ffill()
+        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].bfill()
+
+        # Merge on index
+        dataframe = stock_data.join(interest_data, how='inner')
+    else:
+        print("Request failed with status code:", response.status_code)
+        dataframe = stock_data  # or handle this case appropriately
     
     # Drop rows with missing data to ensure alignment
-    stock_data = stock_data.dropna()
-    
-    return stock_data
+    dataframe.dropna(inplace=True)
+    return dataframe
 
 
 def create_portfolio(
@@ -283,6 +318,28 @@ def create_portfolio(
         returns_df['Market_Returns'] = market_returns
         returns_df['Market_Value'] = market_values
 
+    # ----- Interest Rate Adjustments -----
+
+    # Convert annual interest rates to decimal form if necessary
+    if  data['Interest_Rates'] .max() > 1:
+         data['Interest_Rates']  =  data['Interest_Rates']  / 100
+    
+
+    # Number of days in a year
+    N = 252
+
+    # Convert annual rates to daily rates using compounded formula
+    data['daily_risk_free_rate'] = (1 + data['Interest_Rates']) ** (1 / N) - 1
+
+    # Calculate cumulative risk-free returns over the return period
+    data['risk_free_return'] = data['daily_risk_free_rate'].rolling(window=return_period_days).apply(
+        lambda x: np.prod(1 + x) - 1, raw=True
+    )
+
+    # Add risk-free return to returns_df
+    returns_df['Risk_Free_Return'] = data['risk_free_return']
+    
+
     # Drop rows with all NaN values (if any)
     returns_df.notna()
 
@@ -298,8 +355,7 @@ def create_portfolio(
         "market_values" : returns_df["Market_Value"],
         "portfolio_returns" : returns_df["Portfolio_Returns"],
         "portfolio_values" : returns_df["Portfolio_Value"],
+        "risk_free_returns" : returns_df["Risk_Free_Return"]
     }
-
-    
 
     return portfolio_returns
