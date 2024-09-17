@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
-import yfinance as yf
 import logging
 import statsmodels.api as sm
+
 
 from analyzerportfolio.utils import (
     get_stock_info, 
@@ -112,3 +112,67 @@ def calc_sharpe(portfolio: dict) -> float:
     sharpe_ratio = annualized_mean_excess_return / annualized_std_dev
 
     return sharpe_ratio
+
+def calc_sortino(portfolio: dict, target_return: float = 0.0) -> float:
+    """
+    Calculate the Sortino ratio of a portfolio using monetary investments.
+
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+    - target_return (float, optional): The target return (minimum acceptable return). 
+      Defaults to 0.0, which considers only negative returns as downside risk.
+
+    Returns:
+    - float: The Sortino ratio of the portfolio.
+    """
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+    
+    # Ensure that the returns are aligned on the same dates
+    portfolio_returns = portfolio_returns.dropna()
+
+    # Create a Series with the target return, aligned with portfolio_returns
+    if isinstance(target_return, (float, int)):
+        target_return_series = pd.Series(target_return, index=portfolio_returns.index)
+    else:
+        # Assume target_return is a Series, align indices
+        portfolio_returns, target_return_series = portfolio_returns.align(target_return, join='inner')
+
+    # Calculate the differences between portfolio returns and target return
+    downside_diff = portfolio_returns - target_return_series
+
+    # Keep only negative differences (returns below target), set others to zero
+    downside_diff[downside_diff > 0] = 0
+
+    # Square the negative differences
+    squared_downside_diff = downside_diff ** 2
+
+    # Calculate the mean of the squared negative differences
+    mean_squared_downside_diff = squared_downside_diff.mean()
+
+    # Calculate the downside deviation
+    downside_deviation = np.sqrt(mean_squared_downside_diff)
+
+    # Calculate the mean portfolio return
+    mean_portfolio_return = portfolio_returns.mean()
+
+    # Get the return period from the portfolio
+    return_period_days = portfolio['return_period_days']
+    
+    # Annualization factor based on the return period
+    annualization_factor = 252 / return_period_days  # Adjust if necessary
+
+    # Annualize the mean portfolio return
+    annualized_mean_return = mean_portfolio_return * annualization_factor
+
+    # Annualize the target return
+    annualized_target_return = target_return * annualization_factor
+
+    # Annualize the downside deviation
+    annualized_downside_deviation = downside_deviation * np.sqrt(annualization_factor)
+
+    # Calculate the Sortino ratio
+    sortino_ratio = (annualized_mean_return - annualized_target_return) / annualized_downside_deviation
+
+    return sortino_ratio

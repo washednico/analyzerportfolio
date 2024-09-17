@@ -1,6 +1,7 @@
 from analyzerportfolio.metrics import (
     calc_beta,
-    calc_sharpe
+    calc_sharpe,
+    calc_sortino
     )
 
 from analyzerportfolio.utils import (
@@ -23,9 +24,11 @@ def test_everything():
 
     beta, alpha = calc_beta(portfolio_1)
     sharpe = calc_sharpe(portfolio_1)
+    sortino = calc_sortino(portfolio_1)
 
     print(beta, alpha)
     print(sharpe)
+    print(sortino)
 
 
 

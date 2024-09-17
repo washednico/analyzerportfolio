@@ -1,6 +1,6 @@
 from analyzerportfolio.graphics import (
-    compare_portfolio_mkt,
-    compare_multiple_portfolios
+    portfolio_value,
+    garch
     )
 
 from analyzerportfolio.utils import (
@@ -18,8 +18,6 @@ def test_everything():
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
     portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio 1", rebalancing_period_days=250)
 
-    compare_portfolio_mkt(portfolio_1)
-
     ticker = ['AAPL','MSFT','GOOGL']
     investments = [500,300,800]
     start_date = '2019-01-01'
@@ -29,9 +27,12 @@ def test_everything():
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
     portfolio_2 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 STOCK", rebalancing_period_days=250)
 
-    compare_portfolio_mkt(portfolio_1)
+    portfolio_value(portfolio_1)
+    portfolio_value([portfolio_1,portfolio_2])
+    garch(portfolio_1)
+    garch([portfolio_1,portfolio_2])
 
-    compare_multiple_portfolios([portfolio_1,portfolio_2])
+    
 
 
     

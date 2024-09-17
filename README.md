@@ -12,7 +12,6 @@ You can install analyzerportfolio using pip:
 pip install analyzerportfolio
 ```
 
-
 ## Usage
 
 Below is an example of how to use AnalyzerPortfolio to calculate various portfolio metrics, generate graphical outputs, and analyze stock news.
@@ -55,16 +54,19 @@ Sharpe Ratio:  1.0003270932926993
 
 ### Example: Graphics Module
 ```python
-ap.compare_portfolio_mkt(portfolio_1)
+portfolio_value(portfolio_1)
+portfolio_value([portfolio_1,portfolio_2])
 
-#Compare with other portfolios created
-compare_multiple_portfolios([portfolio_1,portfolio_2])
+garch(portfolio_1)
+garch([portfolio_1,portfolio_2])
 ```
 
-### Output Portfolio vs Market  
-![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/pfvsmkt.png?raw=true)
-### Output Portfolio Comparison  
-![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/pfvspf.png?raw=true)
+### Output Portfolio Value  
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img1.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img2.png?raw=true)
+### Output Garch  
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img3.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img4.png?raw=true)
 
 
 ## Current requirements

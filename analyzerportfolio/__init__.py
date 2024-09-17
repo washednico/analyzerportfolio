@@ -7,9 +7,9 @@ from .utils import create_portfolio
 
 from .metrics import calc_beta
 from .metrics import calc_sharpe
+from .metrics import calc_sortino
 
 
-from .graphics import compare_portfolio_mkt
-from .graphics import compare_multiple_portfolios
-
+from .graphics import portfolio_value
+from .graphics import garch
 
