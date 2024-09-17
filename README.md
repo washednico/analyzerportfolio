@@ -37,7 +37,6 @@ import analyzerportfolio as ap
 data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
 portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", rebalancing_period_days=rebalancing_period_days)
 
-# Calculate portfolio metrics - ap.calculate_portfolio_metrics() will return a dict with the major metrics.
 beta, alpha = ap.calc_beta(portfolio_1)
 sharpe = ap.calc_sharpe(portfolio_1)
 
