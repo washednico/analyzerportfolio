@@ -16,7 +16,7 @@ def test_everything():
     market_ticker = '^GSPC'
     base_currency = 'EUR'
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
-    portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="6 STOCK", rebalancing_period_days=250)
+    portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio 1", rebalancing_period_days=250)
 
     compare_portfolio_mkt(portfolio_1)
 
@@ -29,7 +29,7 @@ def test_everything():
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
     portfolio_2 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 STOCK", rebalancing_period_days=250)
 
-    compare_portfolio_mkt(portfolio_2)
+    compare_portfolio_mkt(portfolio_1)
 
     compare_multiple_portfolios([portfolio_1,portfolio_2])
 

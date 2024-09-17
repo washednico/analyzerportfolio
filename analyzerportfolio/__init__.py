@@ -6,6 +6,7 @@ from .utils import download_data
 from .utils import create_portfolio
 
 from .metrics import calc_beta
+from .metrics import calc_sharpe
 
 
 from .graphics import compare_portfolio_mkt

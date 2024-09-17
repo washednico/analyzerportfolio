@@ -66,3 +66,49 @@ def calc_beta(portfolio: dict) -> tuple:
 
     return beta, annualized_alpha
 
+
+def calc_sharpe(portfolio: dict) -> float:
+    """
+    Calculate the Sharpe ratio of a portfolio using monetary investments.
+
+    Parameters:
+    portfolio (dict): Dictionary created from the create_portfolio function.
+
+    Returns:
+    float: The Sharpe ratio of the portfolio.
+    """
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+    
+    # Extract risk-free returns from the portfolio dictionary
+    risk_free_returns = portfolio['risk_free_returns']
+
+    # Ensure that the returns are aligned on the same dates
+    portfolio_returns, risk_free_returns = portfolio_returns.align(risk_free_returns, join='inner')
+
+    # Calculate excess returns
+    excess_returns = portfolio_returns - risk_free_returns
+
+    # Calculate the mean of the excess returns
+    mean_excess_return = excess_returns.mean()
+
+    # Calculate the standard deviation of the portfolio returns
+    portfolio_std_dev = portfolio_returns.std()
+
+    # Get the return period from the portfolio
+    return_period_days = portfolio['return_period_days']
+    
+    # Annualization factor based on the return period
+    annualization_factor = 252 / return_period_days  # 252 trading days in a year
+
+    # Annualize the mean excess return
+    annualized_mean_excess_return = mean_excess_return * annualization_factor
+
+    # Annualize the standard deviation
+    annualized_std_dev = portfolio_std_dev * np.sqrt(annualization_factor)
+
+    # Calculate the Sharpe ratio
+    sharpe_ratio = annualized_mean_excess_return / annualized_std_dev
+
+    return sharpe_ratio

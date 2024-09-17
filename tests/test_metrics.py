@@ -1,5 +1,6 @@
 from analyzerportfolio.metrics import (
-    calc_beta
+    calc_beta,
+    calc_sharpe
     )
 
 from analyzerportfolio.utils import (
@@ -14,13 +15,17 @@ def test_everything():
     end_date = '2024-08-28'
     market_ticker = '^GSPC'
     base_currency = 'EUR'
+    risk_free = "PCREDIT8"
+    rebalancing_period_days = 250
     
-    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
-    portfolio_df = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", rebalancing_period_days=250)
+    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
+    portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", rebalancing_period_days=rebalancing_period_days)
 
-    beta, alpha = calc_beta(portfolio_df)
+    beta, alpha = calc_beta(portfolio_1)
+    sharpe = calc_sharpe(portfolio_1)
 
     print(beta, alpha)
+    print(sharpe)
 
 
 
