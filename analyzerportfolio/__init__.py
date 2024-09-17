@@ -8,3 +8,7 @@ from .utils import create_portfolio
 from .metrics import calc_beta
 
 
+from .graphics import compare_portfolio_mkt
+from .graphics import compare_multiple_portfolios
+
+

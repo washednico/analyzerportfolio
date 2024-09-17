@@ -352,9 +352,9 @@ def create_portfolio(
         "market_ticker": market_ticker,
         "return_period_days": return_period_days,
         "market_returns" : returns_df["Market_Returns"],
-        "market_values" : returns_df["Market_Value"],
+        "market_value" : returns_df["Market_Value"],
         "portfolio_returns" : returns_df["Portfolio_Returns"],
-        "portfolio_values" : returns_df["Portfolio_Value"],
+        "portfolio_value" : returns_df["Portfolio_Value"],
         "risk_free_returns" : returns_df["Risk_Free_Return"]
     }
 
