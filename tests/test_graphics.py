@@ -2,7 +2,8 @@ from analyzerportfolio.graphics import (
     portfolio_value,
     garch,
     montecarlo,
-    drawdown
+    drawdown,
+    heatmap
     )
 
 from analyzerportfolio.utils import (
@@ -37,7 +38,7 @@ def test_everything():
 
     portfolio_value(portfolio_1)
     portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
-    
+
     garch(portfolio_1)
     garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 
@@ -46,6 +47,8 @@ def test_everything():
     
     drawdown(portfolio_1)
     drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+
+    heatmap(portfolio_1)
 
 
 

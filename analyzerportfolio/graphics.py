@@ -394,3 +394,47 @@ def drawdown(portfolios: Union[str, List[str]],
         fig.show()
 
     return pd.DataFrame(drawdown_data)
+
+def heatmap(
+        portfolio: dict,
+        plot: bool = True
+        ):
+    """
+    Plot a heatmap for correaltion analysis
+
+    Parameters: 
+    portfolio (dict): Portfolio dictionary created from the create_portfolio function.
+    plot (bool): Whether to plot the results (default is True).
+
+    Returns:
+    pd.DataFrame: A DataFrame with the correlation coefficients. 
+    """
+    
+    tickers = portfolio['tickers']
+    
+    revised_tickers = []
+    for i in tickers:
+        revised_tickers.append(i+"_Return")
+    
+    returns_df = portfolio['returns']
+    market_ticker = portfolio['market_ticker']
+
+    # Retrieving returns
+    stock_returns = returns_df[revised_tickers]
+    market_returns = portfolio['market_returns']
+    stock_returns = stock_returns.copy()
+    stock_returns.rename(columns=lambda x: x.replace("_Return",""), inplace=True)
+    
+    # Combine stock and market returns into a single DataFrame
+    combined_returns = pd.concat([stock_returns, market_returns], axis=1)
+
+    # Calculate the correlation matrix
+    corr_matrix = combined_returns.corr()
+
+    if plot:
+        # Plot the clustermap using px 
+        fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
+        fig.update_layout(title_text="Heatmap of Stocks and Market")
+        fig.show()
+
+    return corr_matrix

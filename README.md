@@ -14,7 +14,7 @@ var
 dividend_yield  
 ~analyst_suggestion~  
 simulate_dca  
-heatmap  
+~heatmap~ to push heatmap between portfolios  
 probability_cone  
 distribution_returns  
 newsletter_report  
@@ -101,6 +101,8 @@ ap.montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_leng
 
 ap.drawdown(portfolio_1)
 ap.drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+
+ap.heatmap(portfolio_1)
 ```
 
 ### Output Portfolio Value  
@@ -115,6 +117,8 @@ ap.drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 ### Output Drawdown  
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img7.png?raw=true)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img8.png?raw=true)
+### Outpu Heatmap
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img9.png?raw=true)
 
 
 ## Current requirements

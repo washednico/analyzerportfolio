@@ -15,4 +15,5 @@ from .graphics import portfolio_value
 from .graphics import garch
 from .graphics import montecarlo
 from .graphics import drawdown
+from .graphics import heatmap
 
