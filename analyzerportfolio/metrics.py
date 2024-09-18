@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import norm
 import logging
 import statsmodels.api as sm
+import yfinance as yf
 
 
 from analyzerportfolio.utils import (
@@ -182,9 +183,7 @@ def calc_scenarios(portfolio) -> dict:
     Calculate the portfolio value in different scenarios based on analyst target prices.
 
     Parameters:
-    tickers (list): List of stock tickers.
-    investments (list): Corresponding investment amounts for each ticker.
-    base_currency (str): The base currency for calculating portfolio value (default is 'USD').
+    - portfolio (dict): Dictionary created from the create_portfolio function.
 
     Returns:
     dict: Portfolio values in low, mean, median, and high scenarios.
@@ -232,4 +231,58 @@ def calc_scenarios(portfolio) -> dict:
         'Mean Scenario': portfolio_value_mean,
         'Median Scenario': portfolio_value_median,
         'High Scenario': portfolio_value_high
+    }
+
+def calc_analyst_score(portfolio) -> dict:
+    """
+    Calculate the weighted average analyst suggestion for a portfolio based on Yahoo Finance data. 1 is a strong buy and 5 is a strong sell.
+
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+
+    Returns:
+    dict: A dictionary containing individual ticker suggestions and the weighted average suggestion for the portfolio.
+    """
+    suggestions = []
+    weighted_suggestions = []
+    adjusted_investments = []
+
+    tickers = portfolio['tickers']
+    investments = portfolio['investments']
+
+    # Set up basic configuration for logging
+    logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+    for ticker, investment in zip(tickers, investments):
+        try:
+            stock_info = yf.Ticker(ticker).info
+            analyst_suggestion = stock_info.get('recommendationMean', None)
+            
+            if analyst_suggestion:
+                suggestions.append({
+                    "ticker": ticker,
+                    "suggestion": analyst_suggestion
+                })
+                weighted_suggestions.append(analyst_suggestion * investment)
+                adjusted_investments.append(investment)
+            else:
+                logging.warning(f"No analyst suggestion available for {ticker}. Skipping...")
+        
+        except Exception as e:
+            logging.error(f"Error retrieving data for {ticker}: {e}")
+            continue
+
+    if not suggestions:
+        logging.warning("No valid analyst suggestions were retrieved for the portfolio.")
+        return {
+            "individual_suggestions": [],
+            "weighted_average_suggestion": None
+        }
+
+    # Calculate the weighted average suggestion
+    total_adjusted_investment = sum(adjusted_investments)
+    weighted_average_suggestion = sum(weighted_suggestions) / total_adjusted_investment if total_adjusted_investment > 0 else None
+
+    return {
+        "individual_suggestions": suggestions,
+        "weighted_average_suggestion": weighted_average_suggestion
     }

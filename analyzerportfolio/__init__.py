@@ -9,6 +9,7 @@ from .metrics import calc_beta
 from .metrics import calc_sharpe
 from .metrics import calc_sortino
 from .metrics import calc_scenarios
+from .metrics import calc_analyst_score
 
 from .graphics import portfolio_value
 from .graphics import garch
