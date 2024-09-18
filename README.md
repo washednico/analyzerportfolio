@@ -10,7 +10,7 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~drawdown~  
 ~compare_returns~  
 var  
-portfolio_scanerios  
+~portfolio_scanerios~  
 dividend_yield  
 analyst_suggestion  
 simulate_dca  

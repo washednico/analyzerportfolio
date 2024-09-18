@@ -175,6 +175,7 @@ def create_portfolio(
     investments : list[float],
     market_ticker: str,
     name_portfolio: str,
+    base_currency: str,
     return_period_days : int = 1,
     rebalancing_period_days: int = None,
     target_weights: list[float] = None
@@ -190,6 +191,7 @@ def create_portfolio(
     - investments: List or array of initial investments for each stock.
     - market_ticker: String representing the market index ticker.
     - name_portfolio: String representing the name of the portfolio
+    - base_currency: String representing the base currency for the portfolio.
     - return_period_days: Integer representing the return period in days. Default is 1.
     - rebalancing_period_days: Optional integer representing the rebalancing period in days.
                                If None, no rebalancing is performed.
@@ -348,6 +350,7 @@ def create_portfolio(
         "auto_rebalance" : rebalancing_period_days,
         "tickers": tickers,
         "investments": investments,
+        "base_currency": base_currency,
         "returns": returns_df,
         "market_ticker": market_ticker,
         "return_period_days": return_period_days,

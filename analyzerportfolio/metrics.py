@@ -176,3 +176,60 @@ def calc_sortino(portfolio: dict, target_return: float = 0.0) -> float:
     sortino_ratio = (annualized_mean_return - annualized_target_return) / annualized_downside_deviation
 
     return sortino_ratio
+
+def calc_scenarios(portfolio) -> dict:
+    """
+    Calculate the portfolio value in different scenarios based on analyst target prices.
+
+    Parameters:
+    tickers (list): List of stock tickers.
+    investments (list): Corresponding investment amounts for each ticker.
+    base_currency (str): The base currency for calculating portfolio value (default is 'USD').
+
+    Returns:
+    dict: Portfolio values in low, mean, median, and high scenarios.
+    """
+    portfolio_value_low = 0
+    portfolio_value_mean = 0
+    portfolio_value_median = 0
+    portfolio_value_high = 0
+
+    tickers = portfolio['tickers']
+    investments = portfolio['investments']
+    base_currency = portfolio['base_currency']
+
+    #Ensure there is a position in all tickers
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    for ticker, investment in zip(tickers, investments):
+        stock_info = get_stock_info(ticker)
+        current_price = stock_info['currentPrice']
+        target_low = stock_info['targetLowPrice']
+        target_mean = stock_info['targetMeanPrice']
+        target_median = stock_info['targetMedianPrice']
+        target_high = stock_info['targetHighPrice']
+        stock_currency = stock_info['currency']
+
+        # Convert prices to the base currency if necessary
+        exchange_rate = get_current_rate(base_currency, stock_currency)
+        target_low *= exchange_rate
+        target_mean *= exchange_rate
+        target_median *= exchange_rate
+        target_high *= exchange_rate
+
+        # Calculate the number of shares bought with the investment
+        shares = investment / (current_price * exchange_rate)
+
+        # Calculate portfolio value in each scenario
+        portfolio_value_low += shares * target_low
+        portfolio_value_mean += shares * target_mean
+        portfolio_value_median += shares * target_median
+        portfolio_value_high += shares * target_high
+
+    return {
+        'Low Scenario': portfolio_value_low,
+        'Mean Scenario': portfolio_value_mean,
+        'Median Scenario': portfolio_value_median,
+        'High Scenario': portfolio_value_high
+    }
