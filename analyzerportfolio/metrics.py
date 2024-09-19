@@ -15,7 +15,7 @@ from analyzerportfolio.utils import (
 )
 
 
-def calc_beta(portfolio: dict) -> tuple:
+def c_beta(portfolio: dict) -> tuple:
     """
     Calculate the beta and alpha of a portfolio using monetary investments.
 
@@ -68,7 +68,7 @@ def calc_beta(portfolio: dict) -> tuple:
     return beta, annualized_alpha
 
 
-def calc_sharpe(portfolio: dict) -> float:
+def c_sharpe(portfolio: dict) -> float:
     """
     Calculate the Sharpe ratio of a portfolio using monetary investments.
 
@@ -114,7 +114,7 @@ def calc_sharpe(portfolio: dict) -> float:
 
     return sharpe_ratio
 
-def calc_sortino(portfolio: dict, target_return: float = 0.0) -> float:
+def c_sortino(portfolio: dict, target_return: float = 0.0) -> float:
     """
     Calculate the Sortino ratio of a portfolio using monetary investments.
 
@@ -178,7 +178,7 @@ def calc_sortino(portfolio: dict, target_return: float = 0.0) -> float:
 
     return sortino_ratio
 
-def calc_scenarios(portfolio) -> dict:
+def c_analyst_scenarios(portfolio) -> dict:
     """
     Calculate the portfolio value in different scenarios based on analyst target prices.
 
@@ -233,7 +233,7 @@ def calc_scenarios(portfolio) -> dict:
         'High Scenario': portfolio_value_high
     }
 
-def calc_analyst_score(portfolio) -> dict:
+def c_analyst_score(portfolio) -> dict:
     """
     Calculate the weighted average analyst suggestion for a portfolio based on Yahoo Finance data. 1 is a strong buy and 5 is a strong sell.
 
@@ -286,3 +286,39 @@ def calc_analyst_score(portfolio) -> dict:
         "individual_suggestions": suggestions,
         "weighted_average_suggestion": weighted_average_suggestion
     }
+
+def c_dividend_yield(portfolio : dict) -> float:
+    """
+    Calculate the overall dividend yield of the portfolio.
+
+    Parameters:
+    portfolio: dict created from the create_portfolio function.
+
+    Returns:
+    float: The overall dividend yield of the portfolio as a percentage.
+    """
+
+    tickers = portfolio['tickers']
+    investments = portfolio['investments']
+
+    #Ensure there is a position in all tickers
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    total_investment = sum(investments)
+    weighted_dividend_yield = 0
+
+    for ticker, investment in zip(tickers, investments):
+        stock_info = get_stock_info(ticker)
+        dividend_yield = stock_info.get('dividendYield', 0)
+
+        if dividend_yield is None:
+            continue  # Skip this stock if dividend yield is not available
+
+        # Calculate the weight of this stock in the portfolio
+        weight = investment / total_investment
+
+        # Calculate the contribution to the overall dividend yield
+        weighted_dividend_yield += weight * dividend_yield
+
+    return weighted_dividend_yield

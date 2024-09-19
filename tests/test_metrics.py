@@ -1,9 +1,10 @@
 from analyzerportfolio.metrics import (
-    calc_beta,
-    calc_sharpe,
-    calc_sortino,
-    calc_scenarios,
-    calc_analyst_score
+    c_beta,
+    c_sharpe,
+    c_sortino,
+    c_analyst_scenarios,
+    c_analyst_score,
+    c_dividend_yield
     )
 
 from analyzerportfolio.utils import (
@@ -24,17 +25,19 @@ def test_everything():
     data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free)
     portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, rebalancing_period_days=rebalancing_period_days)
 
-    beta, alpha = calc_beta(portfolio_1)
-    sharpe = calc_sharpe(portfolio_1)
-    sortino = calc_sortino(portfolio_1)
-    scenarios = calc_scenarios(portfolio_1)
-    score = calc_analyst_score(portfolio_1)
+    beta, alpha = c_beta(portfolio_1)
+    sharpe = c_sharpe(portfolio_1)
+    sortino = c_sortino(portfolio_1)
+    scenarios = c_analyst_scenarios(portfolio_1)
+    score = c_analyst_score(portfolio_1)
+    dividend_yield = c_dividend_yield(portfolio_1)
 
     print(beta, alpha)
     print(sharpe)
     print(sortino)
     print(scenarios)
     print(score)
+    print(dividend_yield)
 
 
 

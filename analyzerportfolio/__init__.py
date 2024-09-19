@@ -5,11 +5,12 @@ from .utils import get_current_rate
 from .utils import download_data
 from .utils import create_portfolio
 
-from .metrics import calc_beta
-from .metrics import calc_sharpe
-from .metrics import calc_sortino
-from .metrics import calc_scenarios
-from .metrics import calc_analyst_score
+from .metrics import c_beta
+from .metrics import c_sharpe
+from .metrics import c_sortino
+from .metrics import c_analyst_scenarios
+from .metrics import c_analyst_score
+from .metrics import c_dividend_yield
 
 from .graphics import portfolio_value
 from .graphics import garch
