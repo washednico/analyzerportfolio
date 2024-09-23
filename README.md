@@ -14,13 +14,17 @@ var
 dividend_yield  
 ~analyst_suggestion~  
 simulate_dca  
-~heatmap~ to push heatmap between portfolios  
+~heatmap~  
 probability_cone  
 distribution_returns  
 newsletter_report  
 get_suggestion  
 monitor_news  
 optimization 
+
+## To add
+Heatmap between portfolios  
+Kelly criterion
 
 
 ## Installation
