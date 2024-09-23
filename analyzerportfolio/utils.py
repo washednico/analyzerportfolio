@@ -91,7 +91,7 @@ def get_current_rate(base_currency, quote_currency):
     return exchange_rate_data
 
 
-def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str,risk_free: str = "PCREDIT8", use_cache: bool = False) -> pd.DataFrame:
+def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str,risk_free: str = "DTB3", use_cache: bool = False) -> pd.DataFrame:
     """
     Download stock and market data, convert to base currency, and return the processed data.
     
@@ -101,7 +101,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     start_date (str): Start date for historical data.
     end_date (str): End date for historical data.
     base_currency (str): The base currency for the portfolio (e.g., 'USD').
-    risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'PCREDIT8' for USD).
+    risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
     use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. FOR FUTURE IMPLEMENTATION
 
     Returns:
