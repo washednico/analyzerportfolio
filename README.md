@@ -9,14 +9,14 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~montecarlo~  
 ~drawdown~  
 ~compare_returns~  
-var  
-~portfolio_scanerios~  
-dividend_yield  
+~portfolio_scanerios~   
+~dividend_yield~   
 ~analyst_suggestion~  
-simulate_dca  
 ~heatmap~  
+~distribution_returns~  
 probability_cone  
-distribution_returns  
+simulate_dca  
+var    
 newsletter_report  
 get_suggestion  
 monitor_news  
@@ -107,6 +107,8 @@ ap.drawdown(portfolio_1)
 ap.drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 
 ap.heatmap(portfolio_1)
+
+distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 ```
 
 ### Output Portfolio Value  
@@ -123,6 +125,8 @@ ap.heatmap(portfolio_1)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img8.png?raw=true)
 ### Outpu Heatmap
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img9.png?raw=true)
+### Outpu Distribution Returns
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img10.png?raw=true)
 
 
 ## Current requirements
