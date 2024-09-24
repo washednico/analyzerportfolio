@@ -24,7 +24,7 @@ optimization
 
 ## To add
 Heatmap between portfolios  
-Kelly criterion
+Kelly criterion  
 Fractals model
 
 
