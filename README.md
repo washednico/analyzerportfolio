@@ -25,6 +25,7 @@ optimization
 ## To add
 Heatmap between portfolios  
 Kelly criterion
+Fractals model
 
 
 ## Installation
