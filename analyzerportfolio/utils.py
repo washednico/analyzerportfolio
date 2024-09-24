@@ -134,16 +134,18 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
 
     # Make a request to the specified URL
     url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="+risk_free+"&cosd="+start_date+"&coed="+end_date+"&fq=Daily%2C%207-Day&fam=avg"
+    
     response = requests.get(url)
 
 
     if response.status_code == 200:
         # Get the CSV data from the response
         csv_data = response.text
+        
         interest_data = pd.read_csv(
             StringIO(csv_data)
         ).rename(columns={"DATE": "Date", risk_free: "Interest_Rates"})
-
+        
         # Convert 'Date' to datetime and set as index
         interest_data['Date'] = pd.to_datetime(interest_data['Date'])
         interest_data.set_index('Date', inplace=True)
@@ -153,6 +155,11 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
 
         # Reindex 'interest_data' to match 'stock_data' dates
         interest_data = interest_data.reindex(stock_data.index)
+        
+        # Convert the column to float, forcing invalid strings to NaN (if any)
+        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].replace('.', np.nan)
+
+        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].astype(float)
 
         # Forward-fill missing interest rates
         interest_data['Interest_Rates'] = interest_data['Interest_Rates'].ffill()
@@ -323,6 +330,7 @@ def create_portfolio(
     # ----- Interest Rate Adjustments -----
 
     # Convert annual interest rates to decimal form if necessary
+    
     if  data['Interest_Rates'] .max() > 1:
          data['Interest_Rates']  =  data['Interest_Rates']  / 100
     

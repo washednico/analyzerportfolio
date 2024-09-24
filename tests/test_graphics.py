@@ -3,7 +3,8 @@ from analyzerportfolio.graphics import (
     garch,
     montecarlo,
     drawdown,
-    heatmap
+    heatmap,
+    distribution_return
     )
 
 from analyzerportfolio.utils import (
@@ -16,11 +17,12 @@ def test_everything():
     end_date = '2024-08-28'
     market_ticker = '^GSPC'
     base_currency = 'EUR'
+    risk_free = "DTB3"
 
 
     ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
     investments = [100,200,300,300,200,500]
-    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
+    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
     portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio 1", base_currency=base_currency, rebalancing_period_days=250)
 
     ticker = ['AAPL','MSFT','GOOGL']
@@ -29,7 +31,7 @@ def test_everything():
 
     ticker = ["VWCE.DE","IGLN.L","IUSN.DE"]
     investments = [500,300,800]
-    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
+    data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
     portfolio_3 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 ETF", base_currency=base_currency, rebalancing_period_days=250)
 
     ticker = ["VWCE.DE","IGLN.L"]
@@ -49,6 +51,10 @@ def test_everything():
     drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 
     heatmap(portfolio_1)
+
+    distribution_return(portfolio_1)
+    distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+
 
 
 

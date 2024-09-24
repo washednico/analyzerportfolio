@@ -17,4 +17,5 @@ from .graphics import garch
 from .graphics import montecarlo
 from .graphics import drawdown
 from .graphics import heatmap
+from .graphics import distribution_return
 
