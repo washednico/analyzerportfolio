@@ -14,9 +14,9 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~analyst_suggestion~  
 ~heatmap~  
 ~distribution_returns~  
+~var~  
 probability_cone  
-simulate_dca  
-var    
+simulate_dca       
 newsletter_report  
 get_suggestion  
 monitor_news  

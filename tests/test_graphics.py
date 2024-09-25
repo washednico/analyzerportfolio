@@ -11,8 +11,11 @@ from analyzerportfolio.utils import (
     download_data,
     create_portfolio
 )
-if False:
+if True:
     def test_everything():
+        colors_1 = "orange" #OPTIONAL
+        colors_4 = ["orange","blue","purple","red"]  #OPTIONAL
+
         start_date = '2013-02-01'
         end_date = '2024-08-28'
         market_ticker = '^GSPC'
@@ -38,22 +41,22 @@ if False:
         investments = [1300,300]
         portfolio_4 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="2 ETF",base_currency=base_currency, rebalancing_period_days=250)
 
-        portfolio_value(portfolio_1)
-        portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+        portfolio_value(portfolio_1, colors=colors_1)
+        portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-        garch(portfolio_1)
-        garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+        garch(portfolio_1, colors=colors_1)
+        garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
         montecarlo(portfolio_1, simulation_length=1000)
         montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
         
-        drawdown(portfolio_1)
-        drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+        drawdown(portfolio_1, colors=colors_1)
+        drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
         heatmap(portfolio_1)
 
-        distribution_return(portfolio_1)
-        distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+        distribution_return(portfolio_1, colors=colors_1)
+        distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
 
 

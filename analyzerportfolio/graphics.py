@@ -530,5 +530,3 @@ def distribution_return(
     )
 
     fig.show()
-
-    
