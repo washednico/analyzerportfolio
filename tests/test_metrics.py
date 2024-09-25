@@ -4,7 +4,8 @@ from analyzerportfolio.metrics import (
     c_sortino,
     c_analyst_scenarios,
     c_analyst_score,
-    c_dividend_yield
+    c_dividend_yield,
+    c_VaR
     )
 
 from analyzerportfolio.utils import (
@@ -32,6 +33,10 @@ if True:
         scenarios = c_analyst_scenarios(portfolio_1)
         score = c_analyst_score(portfolio_1)
         dividend_yield = c_dividend_yield(portfolio_1)
+        var_95 = c_VaR(portfolio_1, confidence_level=0.95)
+        var_99_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30)
+        var_95_p = c_VaR(portfolio_1, confidence_level=0.95, method="parametric")
+        var_99_p_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30, method="parametric")
 
         print(beta, alpha)
         print(sharpe)
@@ -39,6 +44,11 @@ if True:
         print(scenarios)
         print(score)
         print(dividend_yield)
+        print(var_95)
+        print(var_99_30d)
+        print(var_95_p)
+        print(var_99_p_30d)
+        
 
 
 

@@ -322,3 +322,49 @@ def c_dividend_yield(portfolio : dict) -> float:
         weighted_dividend_yield += weight * dividend_yield
 
     return weighted_dividend_yield
+
+def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None) -> float:
+    """
+    Calculate the Value at Risk (VaR) of a portfolio using the historical method.
+
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+    - confidence_level (float, optional): The confidence level for the VaR calculation. 
+      Defaults to 0.95 (95% confidence).
+    - horizon_days (int, optional): The number of days ahead for the VaR calculation. 
+      Defaults to 1 day.
+    - method (str, optional): The method used to calculate VaR. historical or parametric. Historical by default.
+    - portfolio_value (int, optional): The value of the portfolio. If not provided, the VaR will be calculated based on the last portfolio value.
+
+    Returns:
+    - float: The Value at Risk (VaR) of the portfolio at the specified confidence level 
+      and time horizon.
+    """
+    return_days = portfolio['return_period_days']
+
+    if portfolio_value is None:
+        # Extract the last portfolio value from the portfolio dictionary
+        portfolio_value = portfolio['portfolio_value'].iloc[-1]
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+    if method == "historical":
+        # Calculate the daily Value at Risk (VaR) using the historical method
+        VaR = portfolio_returns.quantile(1 - confidence_level)
+    elif method == "parametric":
+        # Calculate the mean and standard deviation of the portfolio returns
+        mean_return = portfolio_returns.mean()
+        std_dev = portfolio_returns.std()
+
+        # Calculate the z-score for the specified confidence level
+        z_score = norm.ppf(confidence_level)
+
+        # Calculate the Value at Risk (VaR) using the parametric method
+        VaR = mean_return - z_score * std_dev
+    else:
+        raise ValueError("Invalid method. Choose 'historical' or 'parametric'.")
+
+    # Annualize the VaR for the specified time horizon
+    VaR_annualized = VaR * np.sqrt(horizon_days/return_days) * portfolio_value
+
+    return abs(VaR_annualized)

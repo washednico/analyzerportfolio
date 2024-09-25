@@ -11,6 +11,7 @@ from .metrics import c_sortino
 from .metrics import c_analyst_scenarios
 from .metrics import c_analyst_score
 from .metrics import c_dividend_yield
+from .metrics import c_VaR
 
 from .graphics import portfolio_value
 from .graphics import garch

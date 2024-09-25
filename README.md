@@ -25,7 +25,8 @@ optimization
 ## To add
 Heatmap between portfolios  
 Kelly criterion  
-Fractals model
+Fractals model  
+Expected Shortfall
 
 
 ## Installation
@@ -62,10 +63,15 @@ portfolio_1 = ap.create_portfolio(data, ticker, investments, market_ticker=marke
 
 beta, alpha = ap.calc_beta(portfolio_1)
 sharpe = ap.calc_sharpe(portfolio_1)
+sortino = ap.c_sortino(portfolio_1)
+scenarios = ap.c_analyst_scenarios(portfolio_1)
+score = ap.c_analyst_score(portfolio_1)
+dividend_yield = ap.c_dividend_yield(portfolio_1)
+var_95 = ap.c_VaR(portfolio_1, confidence_level=0.95)
+var_99_30d = ap.c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30)
+var_95_p = ap.c_VaR(portfolio_1, confidence_level=0.95, method="parametric")
+var_99_p_30d = ap.c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30, method="parametric")
 
-print("Beta: ", beta)
-print("Alpha: ", alpha)
-print("Sharpe Ratio: ", sharpe)
 ```
 ### Output Metrics Calculation
 
@@ -73,6 +79,15 @@ print("Sharpe Ratio: ", sharpe)
 Beta:  1.117957602334291
 Alpha:  0.12284375076780196
 Sharpe Ratio:  1.0003270932926993
+Sortino: 1.524920163925947
+Scenarios: {'Low Scenario': 1431.780134608739, 'Mean Scenario': 1800.2148927427404, 'Median Scenario': 1810.3485673486473, 'High Scenario': 2138.98597652531}
+Score: {'individual_suggestions': [{'ticker': 'AAPL', 'suggestion': 2.0}, {'ticker': 'MSFT', 'suggestion': 1.7}, {'ticker': 'GOOGL', 'suggestion': 1.9}, {'ticker': 'AMZN', 'suggestion': 1.8}, {'ticker': 'TSLA', 'suggestion': 2.7}, {'ticker': 'E', 'suggestion': 2.5}], 'weighted_average_suggestion': 2.15}
+Dividend Yield: 0.0229375
+VaR_95: 189.85826340825247
+VaR_99_30d: 1039.8965359745753
+VaR_95_p: 197.53601012635366
+VaR_99_p_30d: 1081.9492866577282
+
 ```
 
 ### Example: Graphics Module
@@ -109,7 +124,7 @@ ap.drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 
 ap.heatmap(portfolio_1)
 
-distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+ap.distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 ```
 
 ### Output Portfolio Value  
