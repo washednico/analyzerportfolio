@@ -16,8 +16,8 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~distribution_returns~  
 ~var~  
 ~simulate_dca~  
-probability_cone  
-monitor_news  
+~monitor_news~  
+probability_cone      
 optimization 
 
 ## Working in progress
