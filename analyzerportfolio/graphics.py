@@ -530,3 +530,191 @@ def distribution_return(
     )
 
     fig.show()
+
+
+def simulate_dca(
+    portfolios: Union[dict, List[dict]],
+    initial_investment: float,
+    periodic_investment: float,
+    investment_interval: int,
+    rebalance_interval: int = None,  
+    colors: Union[str, List[str]] = None,
+    plot: bool = True
+) -> pd.DataFrame:
+    """
+    Simulate a Dollar Cost Averaging investment strategy with optional periodic rebalancing.
+
+    Parameters:
+    portfolios (Union[dict, List[dict]]): A portfolio dictionary or a list of portfolio dictionaries.
+    initial_investment (float): Initial amount to invest at the start.
+    periodic_investment (float): Amount to invest at each interval.
+    investment_interval (int): Interval (in days) between each additional investment.
+    rebalance_interval (int): Interval (in days) between rebalancing the portfolio to its original weights.
+    plot (bool): Whether to plot the results (default is True).
+
+    Returns:
+    pd.DataFrame: A DataFrame with the portfolio values and total invested amount over time for each portfolio.
+    """
+
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    if colors is None:
+        colors = [None] * len(portfolios)
+    elif isinstance(colors, str):
+        colors = [colors]
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        raise ValueError("Invalid type for 'colors' parameter.")
+
+    results = {}
+    fig = go.Figure()
+    summary_data = []
+
+    for portfolio, color in zip(portfolios,colors):
+        tickers = portfolio['tickers']
+        data = portfolio['untouched_data']  # Assuming 'prices' contains the historical data for each ticker
+        investment_weights = portfolio['investments']/sum(portfolio['investments'])
+        
+        # Ensure that weights are normalized
+        if len(tickers) != len(investment_weights):
+            raise ValueError("The number of tickers must match the number of weights.")
+        
+        weights = np.array(investment_weights)
+        weights = weights / weights.sum()  # Normalize the weights
+
+        # Initialize variables
+        dates = data.index
+        portfolio_values = []
+        total_invested = []
+
+        # Initialize holdings for each stock
+        holdings = {ticker: 0 for ticker in tickers}
+        cumulative_investment = initial_investment
+        next_investment_date = dates[0]
+        next_rebalance_date = dates[0] if rebalance_interval else None
+
+        # Initial investment
+        current_prices = data.loc[next_investment_date]
+        for ticker, weight in zip(tickers, weights):
+            shares = (initial_investment * weight) / current_prices[ticker]
+            holdings[ticker] += shares
+
+        # Record initial portfolio value and investment
+        total_value = sum(holdings[ticker] * current_prices[ticker] for ticker in tickers)
+        portfolio_values.append(total_value)
+        total_invested.append(cumulative_investment)
+
+        # Iterate through each date
+        for date in dates[1:]:
+            # Make periodic investment on specified intervals
+            if (date - next_investment_date).days >= investment_interval:
+                current_prices = data.loc[date]
+                for ticker, weight in zip(tickers, weights):
+                    shares = (periodic_investment * weight) / current_prices[ticker]
+                    holdings[ticker] += shares
+                cumulative_investment += periodic_investment
+                next_investment_date = date
+
+            # Perform rebalancing on specified intervals
+            if rebalance_interval and (date - next_rebalance_date).days >= rebalance_interval:
+                # Calculate the total value of the portfolio at current prices
+                current_value = sum(holdings[ticker] * current_prices[ticker] for ticker in tickers)
+
+                # Rebalance the portfolio to match the target weights
+                for ticker, weight in zip(tickers, weights):
+                    target_value = current_value * weight
+                    holdings[ticker] = target_value / current_prices[ticker]
+
+                next_rebalance_date = date
+
+            # Calculate portfolio value for the current date
+            current_prices = data.loc[date]
+            total_value = sum(holdings[ticker] * current_prices[ticker] for ticker in tickers)
+            portfolio_values.append(total_value)
+            total_invested.append(cumulative_investment)
+
+        # Create a DataFrame for each portfolio's simulation results
+        results[portfolio['name']] = pd.DataFrame({
+            'Portfolio Value': portfolio_values,
+            'Total Invested': total_invested
+        }, index=dates)
+
+        # Calculate final values for summary
+        final_portfolio_value = round(portfolio_values[-1], 2)
+        final_total_invested = total_invested[-1]
+        profit = round((final_portfolio_value - final_total_invested), 2)
+        profit_percentage = round(((profit / final_total_invested) * 100), 2)
+
+        # Append data to summary table
+        summary_data.append({
+            'Portfolio': portfolio['name'],
+            'Total Invested': final_total_invested,
+            'Final Value': final_portfolio_value,
+            'Profit': profit,
+            'Profit (%)': profit_percentage
+        })
+
+        
+
+        if plot:
+            # Plotting the results with Plotly
+            
+
+            # Portfolio Value trace
+            fig.add_trace(go.Scatter(
+                x=results[portfolio['name']].index,
+                y=results[portfolio['name']]['Portfolio Value'],
+                mode='lines',
+                name=f'Portfolio Value ({portfolio["name"]})',
+                line=dict(color=color, width=2)
+            ))
+
+            # Total Invested trace
+            fig.add_trace(go.Scatter(
+                x=results[portfolio['name']].index,
+                y=results[portfolio['name']]['Total Invested'],
+                mode='lines',
+                name='Total Invested',
+                line=dict(color='green', width=2, dash='dash')
+            ))
+
+    # Convert summary data to DataFrame
+    summary_df = pd.DataFrame(summary_data)
+
+    # Generate the text to display as a table on the graph
+    summary_text = ""
+    for index, row in summary_df.iterrows():
+        summary_text += (
+            f"{row['Portfolio']} - Total Invested: &#36;{row['Total Invested']:,.2f}, "
+            f"Final Value: &#36;{row['Final Value']:,.2f}, "
+            f"Profit: &#36;{row['Profit']:,.2f} ({row['Profit (%)']}%)<br>"
+        )
+    
+
+    # Update layout and add annotation
+    fig.update_layout(
+        title=f"Portfolio Growth with DCA and Rebalancing",
+        xaxis_title="Date",
+        yaxis_title="Value ($)",
+        template="plotly_dark",
+        annotations=[
+            go.layout.Annotation(
+                text=summary_text,
+                xref="paper", yref="paper",
+                x=0, y=1, showarrow=False,
+                font=dict(color="white", size=12),
+                align="left",
+                bordercolor="white",
+                borderwidth=1,
+                borderpad=4,
+                bgcolor="rgba(0, 0, 0, 0.75)"
+            )
+        ]
+    )
+
+    fig.show()
+
+    return results

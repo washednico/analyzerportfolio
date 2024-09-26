@@ -4,7 +4,8 @@ from analyzerportfolio.graphics import (
     montecarlo,
     drawdown,
     heatmap,
-    distribution_return
+    distribution_return,
+    simulate_dca
     )
 
 from analyzerportfolio.utils import (
@@ -40,7 +41,7 @@ if True:
         ticker = ["VWCE.DE","IGLN.L"]
         investments = [1300,300]
         portfolio_4 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="2 ETF",base_currency=base_currency, rebalancing_period_days=250)
-
+        
         portfolio_value(portfolio_1, colors=colors_1)
         portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
@@ -57,6 +58,9 @@ if True:
 
         distribution_return(portfolio_1, colors=colors_1)
         distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+
+        simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
+        simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)
 
 
 

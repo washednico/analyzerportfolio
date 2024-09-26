@@ -15,18 +15,22 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~heatmap~  
 ~distribution_returns~  
 ~var~  
+~simulate_dca~  
 probability_cone  
-simulate_dca       
-newsletter_report  
-get_suggestion  
 monitor_news  
 optimization 
 
-## To add
+## Working in progress
 Heatmap between portfolios  
 Kelly criterion  
 Fractals model  
-Expected Shortfall
+Expected Shortfall  
+Different types of VaR    
+
+## To Push once everything finish
+newsletter_report   
+get_suggestion  
+Other AI functions
 
 
 ## Installation
@@ -92,39 +96,53 @@ VaR_99_p_30d: 1081.9492866577282
 
 ### Example: Graphics Module
 ```python
+colors_1 = "orange" #OPTIONAL
+colors_4 = ["orange","blue","purple","red"]  #OPTIONAL
+
+start_date = '2013-02-01'
+end_date = '2024-08-28'
+market_ticker = '^GSPC'
+base_currency = 'EUR'
+risk_free = "DTB3"
+
+
 ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
 investments = [100,200,300,300,200,500]
-data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
-portfolio_1 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio 1", rebalancing_period_days=250)
+data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
+portfolio_1 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio 1", base_currency=base_currency, rebalancing_period_days=250)
 
 ticker = ['AAPL','MSFT','GOOGL']
 investments = [500,300,800]
-portfolio_2 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 STOCK", rebalancing_period_days=250)
+portfolio_2 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 STOCK",base_currency=base_currency, rebalancing_period_days=250)
 
 ticker = ["VWCE.DE","IGLN.L","IUSN.DE"]
 investments = [500,300,800]
-data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker)
-portfolio_3 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 ETF", rebalancing_period_days=250)
+data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
+portfolio_3 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="3 ETF", base_currency=base_currency, rebalancing_period_days=250)
 
 ticker = ["VWCE.DE","IGLN.L"]
 investments = [1300,300]
-portfolio_4 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="2 ETF", rebalancing_period_days=250)
+portfolio_4 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="2 ETF",base_currency=base_currency, rebalancing_period_days=250)
 
-ap.portfolio_value(portfolio_1)
-ap.portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+ap.portfolio_value(portfolio_1, colors=colors_1)
+ap.portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-ap.garch(portfolio_1)
-ap.garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+ap.garch(portfolio_1, colors=colors_1)
+ap.garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
 ap.montecarlo(portfolio_1, simulation_length=1000)
 ap.montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
 
-ap.drawdown(portfolio_1)
-ap.drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+ap.drawdown(portfolio_1, colors=colors_1)
+ap.drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
 ap.heatmap(portfolio_1)
 
-ap.distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+ap.distribution_return(portfolio_1, colors=colors_1)
+ap.distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+
+ap.simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
+ap.simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)
 ```
 
 ### Output Portfolio Value  
@@ -143,6 +161,10 @@ ap.distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img9.png?raw=true)
 ### Outpu Distribution Returns
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img10.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img11.png?raw=true)
+### Outpu Distribution Returns
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img12.png?raw=true)
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img13.png?raw=true)
 
 
 ## Current requirements

@@ -366,7 +366,8 @@ def create_portfolio(
         "market_value" : returns_df["Market_Value"],
         "portfolio_returns" : returns_df["Portfolio_Returns"],
         "portfolio_value" : returns_df["Portfolio_Value"],
-        "risk_free_returns" : returns_df["Risk_Free_Return"]
+        "risk_free_returns" : returns_df["Risk_Free_Return"],
+        "untouched_data" : data
     }
 
     return portfolio_returns

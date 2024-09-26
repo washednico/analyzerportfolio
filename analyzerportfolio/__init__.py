@@ -19,4 +19,5 @@ from .graphics import montecarlo
 from .graphics import drawdown
 from .graphics import heatmap
 from .graphics import distribution_return
+from .graphics import simulate_dca
 
