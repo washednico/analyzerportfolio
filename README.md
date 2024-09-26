@@ -27,7 +27,7 @@ Fractals model
 Expected Shortfall  
 Different types of VaR    
 
-## To Push once everything finish
+## To Push once everything is finished
 newsletter_report   
 get_suggestion  
 Other AI functions
