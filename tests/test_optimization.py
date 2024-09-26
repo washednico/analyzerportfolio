@@ -1,3 +1,12 @@
+from analyzerportfolio.optimization import (
+optimize
+    )
+
+from analyzerportfolio.utils import (
+    download_data,
+    create_portfolio
+)
+
 from analyzerportfolio.metrics import (
     c_beta,
     c_sharpe,
@@ -8,12 +17,8 @@ from analyzerportfolio.metrics import (
     c_VaR
     )
 
-from analyzerportfolio.utils import (
-    download_data,
-    create_portfolio
-)
 
-if False:
+if True:
     def test_everything():
         ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
         investments = [100,200,300,300,200,500]
@@ -27,28 +32,15 @@ if False:
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free)
         portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, rebalancing_period_days=rebalancing_period_days)
 
-        beta, alpha = c_beta(portfolio_1)
+        
         sharpe = c_sharpe(portfolio_1)
-        sortino = c_sortino(portfolio_1)
-        scenarios = c_analyst_scenarios(portfolio_1)
-        score = c_analyst_score(portfolio_1)
-        dividend_yield = c_dividend_yield(portfolio_1)
-        var_95 = c_VaR(portfolio_1, confidence_level=0.95)
-        var_99_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30)
-        var_95_p = c_VaR(portfolio_1, confidence_level=0.95, method="parametric")
-        var_99_p_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30, method="parametric")
+        
+        portfolio_optimized = optimize(portfolio_1, metric='sharpe')
+        sharpe_optimized = c_sharpe(portfolio_optimized)
 
-        print(beta, alpha)
-        print(sharpe)
-        print(sortino)
-        print(scenarios)
-        print(score)
-        print(dividend_yield)
-        print(var_95)
-        print(var_99_30d)
-        print(var_95_p)
-        print(var_99_p_30d)
-
+        print("Sharpe ratio before optimization: ", sharpe)
+        print("Sharpe ratio after optimization: ", sharpe_optimized)
+        
 
 
 

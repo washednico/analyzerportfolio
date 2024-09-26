@@ -185,7 +185,7 @@ def create_portfolio(
     base_currency: str,
     return_period_days : int = 1,
     rebalancing_period_days: int = None,
-    target_weights: list[float] = None
+    target_weights: list[float] = None,
 ) -> pd.DataFrame:
     """
     Calculates returns and value amounts for specified stocks over a return period,
@@ -216,10 +216,11 @@ def create_portfolio(
     """
     # Ensure investments and target_weights are numpy arrays
     investments = np.array(investments)
+    total_investment = investments.sum()
+    initial_target = target_weights
 
     if target_weights is None:
         # Calculate target weights from initial investments
-        total_investment = investments.sum()
         target_weights = investments / total_investment
     else:
         target_weights = np.array(target_weights)
@@ -367,7 +368,9 @@ def create_portfolio(
         "portfolio_returns" : returns_df["Portfolio_Returns"],
         "portfolio_value" : returns_df["Portfolio_Value"],
         "risk_free_returns" : returns_df["Risk_Free_Return"],
-        "untouched_data" : data
+        "untouched_data" : data,
+        "target_weights" : initial_target
     }
 
+    
     return portfolio_returns
