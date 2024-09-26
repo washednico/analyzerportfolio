@@ -17,7 +17,7 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~var~  
 ~simulate_dca~  
 ~monitor_news~  
-probability_cone      
+~probability_cone~        
 optimization 
 
 ## Working in progress
@@ -143,6 +143,8 @@ ap.distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors
 
 ap.simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
 ap.simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)
+
+ap.probability_cone(portfolio_1, time_horizon=1000)
 ```
 
 ### Output Portfolio Value  
@@ -157,14 +159,16 @@ ap.simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_inves
 ### Output Drawdown  
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img7.png?raw=true)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img8.png?raw=true)
-### Outpu Heatmap
+### Output Heatmap
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img9.png?raw=true)
-### Outpu Distribution Returns
+### Output Distribution Returns
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img10.png?raw=true)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img11.png?raw=true)
-### Outpu Distribution Returns
+### Output Simulate DCA
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img12.png?raw=true)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img13.png?raw=true)
+### Output Probability Cone
+![alt text](https://github.com/washednico/analyzerportfolio/blob/NEW/img/img14.png?raw=true)
 
 
 ## Current requirements

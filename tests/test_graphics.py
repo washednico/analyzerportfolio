@@ -5,7 +5,8 @@ from analyzerportfolio.graphics import (
     drawdown,
     heatmap,
     distribution_return,
-    simulate_dca
+    simulate_dca,
+    probability_cone
     )
 
 from analyzerportfolio.utils import (
@@ -61,6 +62,10 @@ if True:
 
         simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
         simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)
+
+        probability_cone(portfolio_1, time_horizon=1000)
+
+
 
 
 

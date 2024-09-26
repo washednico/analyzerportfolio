@@ -20,5 +20,6 @@ from .graphics import drawdown
 from .graphics import heatmap
 from .graphics import distribution_return
 from .graphics import simulate_dca
+from .graphics import probability_cone
 
 from .ai import monitor_news

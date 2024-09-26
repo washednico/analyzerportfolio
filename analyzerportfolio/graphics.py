@@ -718,3 +718,104 @@ def simulate_dca(
     fig.show()
 
     return results
+
+
+def probability_cone(
+    portfolio: dict,
+    time_horizon: int,
+    confidence_intervals: list[float] = [0.90, 0.95, 0.99],
+    plot: bool = True
+) -> pd.DataFrame:
+    """
+    Calculate and plot the probability cone for a portfolio over a time horizon.
+
+    Parameters:
+    portfolio (dict): Portfolio dictionary created from the create_portfolio function.
+    time_horizon (int): The number of days over which to calculate the probability cone.
+    confidence_intervals (list[float]): List of confidence intervals to use for the cone (default is [0.90, 0.95, 0.99]).
+    plot (bool): Whether to plot the probability cone (default is True).
+
+    Returns:
+    pd.DataFrame: A DataFrame containing the expected value and the upper and lower bounds for each confidence interval.
+    """
+    
+    portfolio_returns = portfolio['portfolio_returns']
+    days_per_step = portfolio['return_period_days']
+    initial_value = sum(portfolio['investments'])
+
+    # Calculate the mean return and volatility of the portfolio
+    mean_return = (1 + portfolio_returns.mean()) ** (1 / days_per_step) - 1
+    volatility = portfolio_returns.std() / np.sqrt(days_per_step)
+    
+    # Initialize arrays to hold the expected value and confidence intervals
+    time_steps = np.arange(1, time_horizon + 1)
+    expected_value = np.zeros(time_horizon)
+    lower_bounds = {ci: np.zeros(time_horizon) for ci in confidence_intervals}
+    upper_bounds = {ci: np.zeros(time_horizon) for ci in confidence_intervals}
+
+    # Calculate the expected value and confidence intervals for each time step
+    for t in time_steps:
+        cumulative_return = mean_return * t
+        expected_value[t-1] = initial_value * np.exp(cumulative_return)
+        
+        for ci in confidence_intervals:
+            z_score = norm.ppf((1 + ci) / 2)  # Z-score for the given confidence interval
+            std_dev = z_score * volatility * np.sqrt(t)  # Scaling with sqrt(t)
+            lower_bounds[ci][t-1] = initial_value * np.exp(cumulative_return - std_dev)
+            upper_bounds[ci][t-1] = initial_value * np.exp(cumulative_return + std_dev)
+
+    # Combine everything into a DataFrame
+    probability_cone_data = {
+        'Days': time_steps,
+        'Expected Value': expected_value
+    }
+    
+    for ci in confidence_intervals:
+        probability_cone_data[f'Lower Bound {int(ci*100)}%'] = lower_bounds[ci]
+        probability_cone_data[f'Upper Bound {int(ci*100)}%'] = upper_bounds[ci]
+
+    probability_cone_df = pd.DataFrame(probability_cone_data)
+
+    if plot:
+        # Plotting the probability cone with Plotly
+        fig = go.Figure()
+
+        # Plot expected value
+        fig.add_trace(go.Scatter(
+            x=probability_cone_df['Days'],
+            y=probability_cone_df['Expected Value'],
+            mode='lines',
+            name='Expected Value',
+            line=dict(color='orange')
+        ))
+
+        # Plot confidence intervals
+        for ci in confidence_intervals:
+            fig.add_trace(go.Scatter(
+                x=probability_cone_df['Days'],
+                y=probability_cone_df[f'Lower Bound {int(ci*100)}%'],
+                mode='lines',
+                name=f'Lower Bound {int(ci*100)}%',
+                line=dict(color='red', dash='dash')
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=probability_cone_df['Days'],
+                y=probability_cone_df[f'Upper Bound {int(ci*100)}%'],
+                mode='lines',
+                name=f'Upper Bound {int(ci*100)}%',
+                line=dict(color='green', dash='dash')
+            ))
+
+        # Update layout
+        fig.update_layout(
+            title="Probability Cone",
+            xaxis_title="Days",
+            yaxis_title="Portfolio Value",
+            template="plotly_dark",
+            height=600
+        )
+
+        fig.show()
+
+    return probability_cone_df
