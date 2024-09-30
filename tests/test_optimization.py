@@ -15,7 +15,8 @@ from analyzerportfolio.metrics import (
     c_analyst_score,
     c_dividend_yield,
     c_VaR,
-    c_max_drawdown
+    c_max_drawdown,
+    c_volatility
     )
 
 
@@ -30,8 +31,9 @@ if True:
         risk_free = "PCREDIT8"
         rebalancing_period_days = 250
         
+        
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free)
-        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, rebalancing_period_days=rebalancing_period_days)
+        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency,rebalancing_period_days=rebalancing_period_days)
 
         
         sharpe = c_sharpe(portfolio_1)
@@ -41,10 +43,18 @@ if True:
         print("Sharpe ratio before optimization: ", sharpe)
         print("Sharpe ratio after optimization: ", sharpe_optimized)
 
-        drawdwon1 = c_max_drawdown(portfolio_1)
+        volatility1 = c_volatility(portfolio_1)
+        portfolio_optimized = optimize(portfolio_1, metric='volatility')
+        volatility_optimized = c_volatility(portfolio_optimized)
+
+        print("Volatility before optimization: ", volatility1)
+        print("Volatility after optimization: ", volatility_optimized)
+
+        drawdown1 = c_max_drawdown(portfolio_1)
         portfolio_optimized = optimize(portfolio_1, metric='drawdown')
         drawdown_optimized = c_max_drawdown(portfolio_optimized)
-        print("Max drawdown before optimization: ", drawdwon1)
+
+        print("Max drawdown before optimization: ", drawdown1)
         print("Max drawdown after optimization: ", drawdown_optimized)
 
 
