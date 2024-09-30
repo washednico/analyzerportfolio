@@ -44,6 +44,26 @@ def optimize(portfolio: dict,
         sharpe_ratio = ap.c_sharpe(updated_portfolio)
 
         return -sharpe_ratio  # We negate since we're minimizing
+    
+    def drawdwon(weights):
+        # Ensure weights sum to 1
+        weights = np.array(weights)
+        weights /= np.sum(weights)
+
+        # Update the portfolio with the new weights (investments)
+        updated_investment = weights * sum(initial_investments)
+        updated_portfolio = ap.create_portfolio(data, tickers, investments=updated_investment, 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+
+        # Calculate the Sharpe ratio
+        drawdown = ap.c_max_drawdown(updated_portfolio)
+
+        return -drawdown
 
 
     # Constraints: the weights must sum to 1
@@ -74,3 +94,22 @@ def optimize(portfolio: dict,
                                              target_weights= target_weights)
         # Return the updated portfolio with optimized investments
         return new_portfolio
+    
+    if metric == "drawdown":
+                # Optimization using scipy's minimize function
+        result = minimize(negative_sharpe_ratio, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+
+        # Optimized weights (investments)
+        optimal_weights = result.x
+        portfolio['investments'] = optimal_weights * sum(initial_investments)  # Scale weights back to investment amounts
+        
+        new_portfolio = ap.create_portfolio(data, tickers, investments=portfolio['investments'], 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+        # Return the updated portfolio with optimized investments
+        return new_portfolio
+

@@ -5,7 +5,10 @@ from analyzerportfolio.metrics import (
     c_analyst_scenarios,
     c_analyst_score,
     c_dividend_yield,
-    c_VaR
+    c_VaR,
+    c_total_return,
+    c_volatility,
+    c_max_drawdown
     )
 
 from analyzerportfolio.utils import (
@@ -17,7 +20,7 @@ if False:
     def test_everything():
         ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
         investments = [100,200,300,300,200,500]
-        start_date = '2019-01-01'
+        start_date = '2013-02-01'
         end_date = '2024-08-28'
         market_ticker = '^GSPC'
         base_currency = 'EUR'
@@ -28,6 +31,8 @@ if False:
         portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, rebalancing_period_days=rebalancing_period_days)
 
         beta, alpha = c_beta(portfolio_1)
+        return_port = c_total_return(portfolio_1)
+        volatility = c_volatility(portfolio_1)
         sharpe = c_sharpe(portfolio_1)
         sortino = c_sortino(portfolio_1)
         scenarios = c_analyst_scenarios(portfolio_1)
@@ -37,8 +42,12 @@ if False:
         var_99_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30)
         var_95_p = c_VaR(portfolio_1, confidence_level=0.95, method="parametric")
         var_99_p_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30, method="parametric")
+        max_drawdown = c_max_drawdown(portfolio_1)
+
 
         print(beta, alpha)
+        print(return_port)
+        print(volatility)
         print(sharpe)
         print(sortino)
         print(scenarios)
@@ -48,6 +57,7 @@ if False:
         print(var_99_30d)
         print(var_95_p)
         print(var_99_p_30d)
+        print(max_drawdown)
 
 
 

@@ -5,6 +5,8 @@ from .utils import get_current_rate
 from .utils import download_data
 from .utils import create_portfolio
 
+from .metrics import c_total_return
+from .metrics import c_volatility
 from .metrics import c_beta
 from .metrics import c_sharpe
 from .metrics import c_sortino
@@ -12,6 +14,7 @@ from .metrics import c_analyst_scenarios
 from .metrics import c_analyst_score
 from .metrics import c_dividend_yield
 from .metrics import c_VaR
+from .metrics import c_max_drawdown
 
 from .graphics import portfolio_value
 from .graphics import garch

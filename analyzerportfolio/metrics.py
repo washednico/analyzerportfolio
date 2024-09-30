@@ -15,6 +15,51 @@ from analyzerportfolio.utils import (
 )
 
 
+def c_total_return(portfolio: dict) -> float:
+    """
+    Calculate the return of a portfolio using monetary investments.
+
+    Parameters:
+    portfolio (dict): Dictionary created from the create_portfolio function.
+
+    Returns:
+    float: The return of the portfolio as a percentage.
+    """
+
+    # Extract the portfolio value at the beginning and end of the period
+    portfolio_value = portfolio['portfolio_value']
+    initial_value = portfolio_value.iloc[0]
+    final_value = portfolio_value.iloc[-1]
+
+    # Calculate the return as the percentage change in portfolio value
+    return_percentage = (final_value - initial_value) / initial_value
+
+    return return_percentage
+
+def c_volatility(portfolio: dict) -> float:
+    """
+    Calculate the volatility of a portfolio using monetary investments.
+
+    Parameters:
+    portfolio (dict): Dictionary created from the create_portfolio function.
+
+    Returns:
+    float: The volatility of the portfolio as a percentage. (1Y)
+    """
+
+    # Extract the portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+
+    # Calculate the standard deviation of the portfolio returns
+    portfolio_std_dev = portfolio_returns.std()
+
+    # Annualize the standard deviation
+    return_period_days = portfolio['return_period_days']
+    annualization_factor = np.sqrt(252 / return_period_days)  # 252 trading days in a year
+    annualized_std_dev = portfolio_std_dev * annualization_factor
+
+    return annualized_std_dev
+
 def c_beta(portfolio: dict) -> tuple:
     """
     Calculate the beta and alpha of a portfolio using monetary investments.
@@ -368,3 +413,22 @@ def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1
     VaR_annualized = VaR * np.sqrt(horizon_days/return_days) * portfolio_value
 
     return abs(VaR_annualized)
+
+def c_max_drawdown(portfolio: dict) -> float:
+    """
+    Calculate the maximum drawdown of a portfolio.
+
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+
+    Returns:
+    - float: The maximum drawdown of the portfolio.
+    """
+    portfolio_value = portfolio['portfolio_value']
+    peak = portfolio_value.cummax()
+    drawdown = ((portfolio_value - peak) / peak)
+
+    # Calculate the maximum drawdown as the minimum value in the drawdown series
+    max_drawdown = -drawdown.min()
+
+    return max_drawdown

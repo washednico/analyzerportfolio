@@ -14,7 +14,8 @@ from analyzerportfolio.metrics import (
     c_analyst_scenarios,
     c_analyst_score,
     c_dividend_yield,
-    c_VaR
+    c_VaR,
+    c_max_drawdown
     )
 
 
@@ -37,9 +38,19 @@ if True:
         
         portfolio_optimized = optimize(portfolio_1, metric='sharpe')
         sharpe_optimized = c_sharpe(portfolio_optimized)
-
         print("Sharpe ratio before optimization: ", sharpe)
         print("Sharpe ratio after optimization: ", sharpe_optimized)
+
+        drawdwon1 = c_max_drawdown(portfolio_1)
+        portfolio_optimized = optimize(portfolio_1, metric='drawdown')
+        drawdown_optimized = c_max_drawdown(portfolio_optimized)
+        print("Max drawdown before optimization: ", drawdwon1)
+        print("Max drawdown after optimization: ", drawdown_optimized)
+
+
+        
+
+
         
 
 
