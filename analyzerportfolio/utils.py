@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import requests
 from io import StringIO
+from datetime import timedelta
 
 def get_currency(ticker):
     """Fetch the currency of the given ticker using yfinance."""
@@ -91,7 +92,7 @@ def get_current_rate(base_currency, quote_currency):
     return exchange_rate_data
 
 
-def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str,risk_free: str = "DTB3", use_cache: bool = False) -> pd.DataFrame:
+def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str,risk_free: str = "DTB3", use_cache: bool = False, folder_path: str = None) -> pd.DataFrame:
     """
     Download stock and market data, convert to base currency, and return the processed data.
     
@@ -103,6 +104,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     base_currency (str): The base currency for the portfolio (e.g., 'USD').
     risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
     use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. FOR FUTURE IMPLEMENTATION
+    folder_path (str): Path to the folder where the cache will be stored. Default is None. FOR FUTURE IMPLEMENTATION
 
     Returns:
     pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
@@ -111,69 +113,202 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     #TO DO, CHECK CACHE
     exchange_rate_cache = {}
     stock_data = pd.DataFrame()
+
+    def cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path):
+        csv_exchange_rate = "/"+base_currency+"_"+currency+".csv"
+        try:
+            exchange_rate_df = pd.read_csv(folder_path + csv_exchange_rate, index_col=0, parse_dates=True)
+            exchange_rate = exchange_rate_df.squeeze()
+            exchange_rate.index = pd.to_datetime(exchange_rate.index, errors='coerce')
+            # Get the first and last date in the cached data
+            first_date_cached = exchange_rate.index[0]
+            last_date_cached = exchange_rate.index[-1]
+            
+
+            # Convert start_date and end_date to datetime for comparison
+            start_date_dt = pd.to_datetime(start_date)
+            end_date_dt = pd.to_datetime(end_date)
+
+
+            if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
+                missing_data = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
+                exchange_rate.index = pd.to_datetime(exchange_rate.index, errors='coerce')
+                missing_data.index = pd.to_datetime(missing_data.index, errors='coerce')
+                full_exchange_rate_data = pd.concat([exchange_rate, missing_data]).sort_index()
+                full_exchange_rate_data.to_csv(folder_path + csv_exchange_rate)
+                return missing_data
+            
+            else:
+                filtered_data = exchange_rate[(exchange_rate.index >= start_date) & (exchange_rate.index <= end_date)]
+                return filtered_data
+
+        
+        except FileNotFoundError:
+            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
+            exchange_rate.to_csv(folder_path + csv_exchange_rate)
+
+        return exchange_rate
+    
+    def get_interest_rates(risk_free, start_date, end_date):
+        # Make a request to the specified URL
+        url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="+risk_free+"&cosd="+start_date+"&coed="+end_date+"&fq=Daily%2C%207-Day&fam=avg"
+        
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            # Get the CSV data from the response
+            csv_data = response.text
+            
+            interest_data = pd.read_csv(
+                StringIO(csv_data)
+            ).rename(columns={"DATE": "Date", risk_free: "Interest_Rates"})
+            
+            # Convert 'Date' to datetime and set as index
+            interest_data['Date'] = pd.to_datetime(interest_data['Date'])
+            interest_data.set_index('Date', inplace=True)
+
+            # Ensure 'stock_data' index is datetime and aligned
+            stock_data.index = pd.to_datetime(stock_data.index)
+
+            # Reindex 'interest_data' to match 'stock_data' dates
+            interest_data = interest_data.reindex(stock_data.index)
+            
+            # Convert the column to float, forcing invalid strings to NaN (if any)
+            interest_data['Interest_Rates'] = interest_data['Interest_Rates'].replace('.', np.nan)
+
+            interest_data['Interest_Rates'] = interest_data['Interest_Rates'].astype(float)
+
+            # Forward-fill missing interest rates
+            interest_data['Interest_Rates'] = interest_data['Interest_Rates'].ffill()
+            interest_data['Interest_Rates'] = interest_data['Interest_Rates'].bfill()
+            return interest_data
+        else:
+            print("Risk Free request failed with status code:", response.status_code)
+            return None
+        
+        
+
+    
+    def cached_interest_rates(risk_free, start_date, end_date, folder_path):
+        try:
+            interest_rate_df = pd.read_csv(folder_path + "/"+risk_free+".csv", index_col=0, parse_dates=True)
+            interest_rate = interest_rate_df.squeeze()
+            interest_rate.index = pd.to_datetime(interest_rate.index, errors='coerce')
+            # Get the first and last date in the cached data
+            first_date_cached = interest_rate.index[0]
+            last_date_cached = interest_rate.index[-1]
+
+            # Convert start_date and end_date to datetime for comparison
+            start_date_dt = pd.to_datetime(start_date)
+            end_date_dt = pd.to_datetime(end_date)
+
+            if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
+                missing_data = get_interest_rates(risk_free, start_date, end_date)
+                interest_rate.index = pd.to_datetime(interest_rate.index, errors='coerce')
+                missing_data.index = pd.to_datetime(missing_data.index, errors='coerce')
+                full_interest_rate_data = pd.concat([interest_rate, missing_data]).sort_index()
+                full_interest_rate_data.to_csv(folder_path + "/"+risk_free+".csv")
+                return missing_data
+            else:
+                filtered_data = interest_rate[(interest_rate.index >= start_date) & (interest_rate.index <= end_date)]
+                return filtered_data
+        except FileNotFoundError:
+            interest_rate = get_interest_rates(risk_free, start_date, end_date)
+            interest_rate.to_csv(folder_path + "/"+risk_free+".csv")
+            return interest_rate
+
+                
+    
+
     
     # Fetch and process each stock's data
-    for ticker in tickers:
-        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
-        currency = get_currency(ticker)
-        if currency != base_currency:
-            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
-            data = convert_to_base_currency(data, exchange_rate)
-        stock_data[ticker] = data
-    
-    # Fetch and process market index data
-    market_data = yf.download(market_ticker, start=start_date, end=end_date)['Adj Close']
-    market_currency = get_currency(market_ticker)
-    if market_currency != base_currency:
-        exchange_rate = get_exchange_rate(base_currency, market_currency, start_date, end_date, exchange_rate_cache)
-        market_data = convert_to_base_currency(market_data, exchange_rate)
-    
-    # Add market data to stock data
-    stock_data[market_ticker] = market_data
+    if use_cache:
+        for ticker in tickers + [market_ticker]:
+            try:
+                ticker_data_df = pd.read_csv(folder_path + "/"+ticker+".csv", index_col=0, parse_dates=True)
+                ticker_data = ticker_data_df.squeeze()
+                # Ensure the index is datetime
+                ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')
+                
+                column_split = ticker_data.name.split(" ")
+                currency = column_split[-1]
+                ticker_data.name = "Adj Close"
 
+                first_date_cached = ticker_data.index[0]
+                last_date_cached = ticker_data.index[-1]
+                
 
-    # Make a request to the specified URL
-    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="+risk_free+"&cosd="+start_date+"&coed="+end_date+"&fq=Daily%2C%207-Day&fam=avg"
-    
-    response = requests.get(url)
+                # Convert start_date and end_date to datetime for comparison
+                start_date_dt = pd.to_datetime(start_date)
+                end_date_dt = pd.to_datetime(end_date)
+                
 
+                if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
 
-    if response.status_code == 200:
-        # Get the CSV data from the response
-        csv_data = response.text
+                    missing_data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+                    ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')
+                    missing_data.index = pd.to_datetime(missing_data.index, errors='coerce')
+                    full_stock_data = pd.concat([ticker_data, missing_data]).sort_index()
+
+                    data_to_save = full_stock_data.copy()
+                    data_to_save.name = f"Adj Close {currency}"
+                    data_to_save.to_csv(folder_path + "/"+ticker+".csv")
+
+                    if currency != base_currency:
+                        exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
+                        data = convert_to_base_currency(missing_data, exchange_rate)
+                    else:
+                        data = missing_data
+                
+                else:
+                    data = ticker_data[(ticker_data.index >= start_date) & (ticker_data.index <= end_date)]
+                
+                stock_data[ticker] = ticker_data
+                        
+                    
+            except FileNotFoundError:
+                data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+                currency = get_currency(ticker)
+                if currency != base_currency:
+                    
+                    exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
+                    data = convert_to_base_currency(data, exchange_rate)
         
-        interest_data = pd.read_csv(
-            StringIO(csv_data)
-        ).rename(columns={"DATE": "Date", risk_free: "Interest_Rates"})
+                stock_data[ticker] = data
+
+                data_to_save = data.copy()
+                data_to_save.name = f"Adj Close {currency}"
+                data_to_save.to_csv(folder_path + "/"+ticker+".csv")
+
+    else:
+        for ticker in tickers + [market_ticker]:
+            data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+            currency = get_currency(ticker)
+            if currency != base_currency:
+                exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
+                data = convert_to_base_currency(data, exchange_rate)
+            stock_data[ticker] = data  
+
+
+    
+    if use_cache:
+        interest_data = cached_interest_rates(risk_free, start_date, end_date, folder_path)
+    else:
+        interest_data = get_interest_rates(risk_free, start_date, end_date)
         
-        # Convert 'Date' to datetime and set as index
-        interest_data['Date'] = pd.to_datetime(interest_data['Date'])
-        interest_data.set_index('Date', inplace=True)
-
-        # Ensure 'stock_data' index is datetime and aligned
-        stock_data.index = pd.to_datetime(stock_data.index)
-
-        # Reindex 'interest_data' to match 'stock_data' dates
-        interest_data = interest_data.reindex(stock_data.index)
-        
-        # Convert the column to float, forcing invalid strings to NaN (if any)
-        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].replace('.', np.nan)
-
-        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].astype(float)
-
-        # Forward-fill missing interest rates
-        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].ffill()
-        interest_data['Interest_Rates'] = interest_data['Interest_Rates'].bfill()
-
+            
+    
+    if interest_data is not None:
         # Merge on index
         dataframe = stock_data.join(interest_data, how='inner')
+        # Drop rows with missing data to ensure alignment
+        dataframe.dropna(inplace=True)
+        return dataframe
     else:
-        print("Request failed with status code:", response.status_code)
-        dataframe = stock_data  # or handle this case appropriately
-    
-    # Drop rows with missing data to ensure alignment
-    dataframe.dropna(inplace=True)
-    return dataframe
+        return None
+
+        
+        
 
 
 def create_portfolio(
