@@ -112,6 +112,51 @@ def c_beta(portfolio: dict) -> tuple:
 
     return beta, annualized_alpha
 
+def c_info_ratio(portfolio: dict) -> float:
+    """
+    Calculate the information ratio of a portfolio using monetary investments 
+
+    Parameters:
+    portofolio (dict): Dictionary created from the create_portfolio function
+
+    Returns:
+    float: The Information ratio of the portfolio
+    """
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+
+    # Extract market returns form the portfolio dictionary
+    market_returns = portfolio['market_returns']
+
+    # Ensure that the returns are aligned on the same dates
+    portfolio_returns, market_returns = portfolio_returns.align(market_returns, join='inner')
+
+    # Calculate excess returns
+    excess_returns = portfolio_returns - market_returns
+
+    # Calculate excess return std dev
+    excess_return_std_dev = excess_returns.std()
+
+    # Calculate the mean of the excess returns
+    mean_excess_return = excess_returns.mean()
+
+    # Get the return period from the portfolio
+    return_period_days = portfolio['return_period_days']
+    
+    # Annualization factor based on the return period
+    annualization_factor = 252 / return_period_days  # 252 trading days in a year
+
+    # Annualize the mean excess return
+    annualized_mean_excess_return = mean_excess_return * annualization_factor
+
+    # Annualize the excess return std dev 
+    annulized_excess_return_std_dev = excess_return_std_dev * annualization_factor
+
+    # Calculate the information raito
+    information_ratio = annualized_mean_excess_return / annulized_excess_return_std_dev
+
+    return information_ratio
 
 def c_sharpe(portfolio: dict) -> float:
     """

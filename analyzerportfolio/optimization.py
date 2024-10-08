@@ -24,7 +24,6 @@ def optimize(portfolio: dict,
     target_weights = portfolio["target_weights"]  
     return_period_days = portfolio['return_period_days']
 
-    # Function to calculate negative Sharpe ratio (to minimize)
     def negative_sharpe_ratio(weights):
         # Ensure weights sum to 1
         weights = np.array(weights)
@@ -85,7 +84,27 @@ def optimize(portfolio: dict,
 
         return volatility
 
+    def negative_information_ratio(weights):
 
+        # Ensure weights sum to 1
+        weights = np.array(weights)
+        weights /= np.sum(weights)
+
+        # Update the portofolio with the new weights (investments)
+        updated_investment = weights * sum(initial_investments)
+        updated_portfolio = ap.create_portfolio(data, tickers, investments=updated_investment, 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+
+        # Calculate the Information ratio
+        information_ratio = ap.c_info_ratio(updated_portfolio)
+
+        return -information_ratio
+    
     # Constraints: the weights must sum to 1
     constraints = ({'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1})
 
@@ -134,7 +153,7 @@ def optimize(portfolio: dict,
         return new_portfolio
     
     if metric == "volatility":
-                # Optimization using scipy's minimize function
+        # Optimization using scipy's minimize function
         result = minimize(volatility, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
 
         # Optimized weights (investments)
@@ -150,5 +169,22 @@ def optimize(portfolio: dict,
                                              target_weights= target_weights)
         # Return the updated portfolio with optimized investments
         return new_portfolio
+    
+    if metric == "information_ratio":
+        # Optimization using scipy's minimize function
+        result = minimize(negative_information_ratio, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
 
+        # Optimized weights (investments)
+        optimal_weights = result.x
+        portfolio['investments'] = optimal_weights * sum(initial_investments)  # Scale weights back to investment amounts
+        
+        new_portfolio = ap.create_portfolio(data, tickers, investments=portfolio['investments'], 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+        # Return the updated portfolio with optimized investments
+        return new_portfolio
 

@@ -15,6 +15,7 @@ from .metrics import c_analyst_score
 from .metrics import c_dividend_yield
 from .metrics import c_VaR
 from .metrics import c_max_drawdown
+from .metrics import c_info_ratio
 
 from .graphics import portfolio_value
 from .graphics import garch
