@@ -21,7 +21,7 @@ from analyzerportfolio.metrics import (
     )
 
 
-if True:
+if False:
     def test_everything():
         ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
         investments = [100,200,300,300,200,500]

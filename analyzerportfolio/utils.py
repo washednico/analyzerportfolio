@@ -103,14 +103,14 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     end_date (str): End date for historical data.
     base_currency (str): The base currency for the portfolio (e.g., 'USD').
     risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
-    use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. FOR FUTURE IMPLEMENTATION
-    folder_path (str): Path to the folder where the cache will be stored. Default is None. FOR FUTURE IMPLEMENTATION
+    use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. 
+    folder_path (str): Path to the folder where the cache will be stored. Default is None. 
 
     Returns:
     pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
     """
 
-    #TO DO, CHECK CACHE
+    
     exchange_rate_cache = {}
     stock_data = pd.DataFrame()
 
