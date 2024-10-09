@@ -30,24 +30,28 @@ if True:
         investments = []
         for root,dirs,files in os.walk("/Users/nicolafochi/Desktop/index_clean"):
             for file in files:
-                if file.endswith(".csv"):
+                if file.endswith("Equity.csv"):
+                    
+                    if len(ticker) == 10:
+                        break
                     ticker.append(file[:-4])
                     investments.append(100000)
 
-        print(ticker)
 
-        start_date = '2023-01-01'
+        start_date = '2022-08-27'
         end_date = '2024-08-28'
         market_ticker = '^GSPC'
         base_currency = 'USD'
         risk_free = "PCREDIT8"
-        rebalancing_period_days = 250
+        
         
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/index_clean")
-        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency,rebalancing_period_days=rebalancing_period_days)
+        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency)
 
         information_ratio1 = c_info_ratio(portfolio_1)
+        print(information_ratio1)
+
         portfolio_optimized = optimize(portfolio_1, metric='information_ratio')
         information_ratio_optimized = c_info_ratio(portfolio_optimized)
         print(information_ratio1)
