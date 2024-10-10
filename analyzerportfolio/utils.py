@@ -276,7 +276,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 end_date_dt = pd.to_datetime(end_date)
 
                 data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
-                
+
                 date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
                 data = data.reindex(date_range)
                 # Reindex the data to the complete date range and fill missing entries with NaN
@@ -410,14 +410,17 @@ def create_portfolio(
 
     # Create a DataFrame to store returns and values
     returns_df = pd.DataFrame(index=stock_data.index)
+    
     # Add stock returns
-    for ticker in tickers:
-        returns_df[f'{ticker}_Return'] = stock_returns[ticker]
-        returns_df[f'{ticker}_Value'] = stock_values[ticker]
+    columns_to_add = {
+                        **{f'{ticker}_Return': stock_returns[ticker] for ticker in tickers},
+                        **{f'{ticker}_Value': stock_values[ticker] for ticker in tickers},
+                        'Portfolio_Returns': portfolio_returns,
+                        'Portfolio_Value': portfolio_values,
+                    }
 
-    # Add portfolio returns and values
-    returns_df['Portfolio_Returns'] = portfolio_returns
-    returns_df['Portfolio_Value'] = portfolio_values
+# Create a new DataFrame with these columns
+    returns_df = pd.DataFrame(columns_to_add, index=stock_data.index)
 
     # ----- Portfolio With Auto-Rebalancing (if rebalancing_period_days is provided) -----
     if rebalancing_period_days is not None:
@@ -509,6 +512,7 @@ def create_portfolio(
         "auto_rebalance" : rebalancing_period_days,
         "tickers": tickers,
         "investments": investments,
+        "weights": investments / total_investment,
         "base_currency": base_currency,
         "returns": returns_df,
         "market_ticker": market_ticker,
@@ -524,3 +528,16 @@ def create_portfolio(
 
     
     return portfolio_returns
+
+
+def read_portfolio_composition(portfolio, min_value=0.01):
+    """Read the composition of the portfolio from the portfolio dictionary and filter by minimum weight."""
+    composition = {}
+    tickers = portfolio["tickers"]
+    weights = portfolio["weights"]
+    
+    for ticker, weight in zip(tickers, weights):
+        if weight > min_value:
+            composition[ticker] = weight
+    
+    return composition
