@@ -102,7 +102,6 @@ def optimize(portfolio: dict,
 
         # Calculate the Information ratio
         information_ratio = ap.c_info_ratio(updated_portfolio)
-        print(information_ratio)
         return -information_ratio
     
     # Constraints: the weights must sum to 1
