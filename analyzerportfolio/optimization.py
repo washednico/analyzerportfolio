@@ -1,126 +1,189 @@
+import analyzerportfolio as ap
 import numpy as np
-import pandas as pd
+from scipy.optimize import minimize
 
-from scipy import optimize
-
-from analyzerportfolio.metrics import (
-    calculate_daily_returns,
-    calculate_sharpe_ratio,
-    calculate_sortino_ratio,
-    calculate_max_drawdown
-)
-
-from analyzerportfolio.utils import (
-    check_dataframe
-)
-
-def markowitz_optimization(data: pd.DataFrame, tickers: list[str], investments: list[float], rf_rate: float = 0.0, method='sharpe', target=0.05):
+def optimize(portfolio: dict, 
+             metric: str = 'sharpe'):
     """
-    Perform Markowitz optimization to find the minimum variance portfolio and plot the efficient frontier.
-
+    Optimize the investments in the portfolio to maximize the Sharpe ratio.
+    
     Parameters:
-    data (pd.DataFrame): DataFrame containing historical price data for assets and the market index.
-    tickers (list[str]): List of asset tickers in the portfolio.
-    investments (list[float]): List of monetary investments for each asset.
-    rf_rate (float): Indicating risk-free rate (default is 0.0).
-    method (str): Optimization method to use (default is 'sharpe'). Accepted values: 'sharpe', 'variance', 'return', 'sortino', 'drawdown'.
-    target (float): Target return for the portfolio (default is 0.05).
-
+    portfolio (dict): A portfolio dictionary created using the `create_portfolio` function.
+    
     Returns:
-    dict: Dictionary containing portfolio metrics based on optimal weights.
+    dict: The optimized portfolio dictionary with updated investments to maximize Sharpe ratio.
     """
-
     
-    #All weights, of course, must be between 0 and 1. Thus we set 0 and 1 as the boundaries. 
-    #The second boundary is the sum of weights = 1.
+    tickers = portfolio['tickers']
+    initial_investments = portfolio['investments']
+    data = portfolio['untouched_data']
+    market_ticker = portfolio['market_ticker']
+    base_currency = portfolio['base_currency']
+    rebalancing_period_days = portfolio['auto_rebalance']
+    risk_free_rate = portfolio['risk_free_returns']
+    target_weights = portfolio["target_weights"]  
+    return_period_days = portfolio['return_period_days']
+
+    def negative_sharpe_ratio(weights):
+        # Ensure weights sum to 1
+        weights = np.array(weights)
+        weights /= np.sum(weights)
+
+        # Update the portfolio with the new weights (investments)
+        updated_investment = weights * sum(initial_investments)
+        updated_portfolio = ap.create_portfolio(data, tickers, investments=updated_investment, 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+
+        # Calculate the Sharpe ratio
+        sharpe_ratio = ap.c_sharpe(updated_portfolio)
+
+        return -sharpe_ratio  # We negate since we're minimizing
     
-    #Sequential Least Squares Programming (SLSQP) Algorithm
-    #- https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html
-    #NOTE: we are minimizing the negative of sharpe ratio since maximise function is not supported by scipy
+    def drawdwon(weights):
+        # Ensure weights sum to 1
+        weights = np.array(weights)
+        weights /= np.sum(weights)
 
+        # Update the portfolio with the new weights (investments)
+        updated_investment = weights * sum(initial_investments)
+        updated_portfolio = ap.create_portfolio(data, tickers, investments=updated_investment, 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
 
-    def portfolio_performance(weights, mean_returns, cov_matrix):
-        """
-        Calculate portfolio metrics.
-        """
-        returns = np.matmul(mean_returns.T, weights) * 252
-        variance = np.dot(weights.T, np.dot(cov_matrix, weights))
-        vol = np.sqrt(variance) * np.sqrt(252)
-        return {
-            'return': returns,
-            'volatility': vol,
-        }
+        # Calculate the Sharpe ratio
+        drawdown = ap.c_max_drawdown(updated_portfolio)
 
-    def minimize_sharpe(weights, data, tickers, rf_rate):
-        investments = [x * 1000 for x in weights]
-        sharpe = calculate_sharpe_ratio(data, tickers, investments, rf_rate)
-        return -sharpe
-
-    def minimize_sortino(weights, data, tickers, rf_rate, target_return=0.0):
-        investments = [x * 1000 for x in weights]
-        sortino = calculate_sortino_ratio(data, tickers, investments, target_return, rf_rate)
-        return -sortino
-
-    def minimize_max_drawdown(weights, data, tickers):
-        investments = [x * 1000 for x in weights]
-        max_drawdown = calculate_max_drawdown(data, tickers, investments)
-        return -max_drawdown
+        return drawdown
     
-    def minimize_volatility(weights):
-        return portfolio_performance(weights, mean_returns, covar_matrix)['volatility']
+    def volatility(weights):
+        # Ensure weights sum to 1
+        weights = np.array(weights)
+        weights /= np.sum(weights)
 
-    def minimize_return(weights):
-        return -portfolio_performance(weights, mean_returns, covar_matrix)['return']
+        # Update the portfolio with the new weights (investments)
+        updated_investment = weights * sum(initial_investments)
+        updated_portfolio = ap.create_portfolio(data, tickers, investments=updated_investment, 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+
+        # Calculate the Sharpe ratio
+        volatility = ap.c_volatility(updated_portfolio)
+
+        return volatility
+
+    def negative_information_ratio(weights):
+
+        # Ensure weights sum to 1
+        weights = np.array(weights)
+        weights /= np.sum(weights)
+
+        # Update the portofolio with the new weights (investments)
+        updated_investment = weights * sum(initial_investments)
+        updated_portfolio = ap.create_portfolio(data, tickers, investments=updated_investment, 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+
+        # Calculate the Information ratio
+        information_ratio = ap.c_info_ratio(updated_portfolio)
+        return -information_ratio
     
+    # Constraints: the weights must sum to 1
+    constraints = ({'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1})
 
-    def optimize_portfolio(minimize_func, initializer, bounds, constraints, *args):
-        """
-        SLSQP ALGORITHM
-        """
-        optimal = optimize.minimize(minimize_func,
-                                    initializer,
-                                    method='SLSQP',
-                                    bounds=bounds,
-                                    constraints=constraints,
-                                    args=args)  # Pass additional arguments here
+    # Bounds for weights: between 0 and 1 (no short selling)
+    bounds = [(0, 1) for _ in range(len(tickers))]
 
-        # Extract and round the optimized weights
-        optimal_weights = optimal['x'].round(4)
+    # Initial guess: normalize the initial investments
+    initial_weights = np.array(initial_investments) / np.sum(initial_investments)
 
-        # Calculate portfolio performance metrics
-        portfolio_metrics = portfolio_performance(optimal_weights, mean_returns, covar_matrix)
-        optimal_return = portfolio_metrics['return']
-        optimal_vol = portfolio_metrics['volatility']
+    if metric == 'sharpe':
 
-        # Combine the results into a structured dictionary
-        result = {
-            'weights': list(zip(tickers, list(optimal_weights))),
-            'return': optimal_return,
-            'volatility': optimal_vol
-        }
 
-        return result
+        # Optimization using scipy's minimize function
+        result = minimize(negative_sharpe_ratio, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
 
-    if check_dataframe(data, tickers, investments):
-        data = data.divide(data.iloc[0] / 100)  # Normalize prices
-        stock_returns = calculate_daily_returns(data[tickers])
-        mean_returns = np.mean(stock_returns, axis=0)
-        covar_matrix = np.cov(stock_returns, rowvar=False)
-        num_assets = len(tickers)
-
-        # Constraints and initial guess
-        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
-        bounds = tuple((0, 1) for x in range(num_assets))
-        initializer = num_assets * [1. / num_assets, ]
-
+        # Optimized weights (investments)
+        optimal_weights = result.x
+        portfolio['investments'] = optimal_weights * sum(initial_investments)  # Scale weights back to investment amounts
+        
+        new_portfolio = ap.create_portfolio(data, tickers, investments=portfolio['investments'], 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+        # Return the updated portfolio with optimized investments
+        return new_portfolio
     
-        if method == 'variance':
-            return optimize_portfolio(minimize_volatility, initializer, bounds, constraints)
-        elif method == 'return':
-            return optimize_portfolio(minimize_return, initializer, bounds, constraints)
-        elif method == 'sortino':
-            return optimize_portfolio(minimize_sortino, initializer, bounds, constraints, data, tickers, rf_rate, target)
-        elif method == 'drawdown':
-            return optimize_portfolio(minimize_max_drawdown, initializer, bounds, constraints, data, tickers)
-        elif method == 'sharpe':
-            return optimize_portfolio(minimize_sharpe, initializer, bounds, constraints, data, tickers, rf_rate)
+    if metric == "drawdown":
+                # Optimization using scipy's minimize function
+        result = minimize(drawdwon, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+
+        # Optimized weights (investments)
+        optimal_weights = result.x
+        portfolio['investments'] = optimal_weights * sum(initial_investments)  # Scale weights back to investment amounts
+        
+        new_portfolio = ap.create_portfolio(data, tickers, investments=portfolio['investments'], 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+        # Return the updated portfolio with optimized investments
+        return new_portfolio
+    
+    if metric == "volatility":
+        # Optimization using scipy's minimize function
+        result = minimize(volatility, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+
+        # Optimized weights (investments)
+        optimal_weights = result.x
+        portfolio['investments'] = optimal_weights * sum(initial_investments)  # Scale weights back to investment amounts
+        
+        new_portfolio = ap.create_portfolio(data, tickers, investments=portfolio['investments'], 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+        # Return the updated portfolio with optimized investments
+        return new_portfolio
+    
+    if metric == "information_ratio":
+        # Optimization using scipy's minimize function
+        result = minimize(negative_information_ratio, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+
+        # Optimized weights (investments)
+        optimal_weights = result.x
+        portfolio['investments'] = optimal_weights * sum(initial_investments)  # Scale weights back to investment amounts
+        
+        new_portfolio = ap.create_portfolio(data, tickers, investments=portfolio['investments'], 
+                                             market_ticker=market_ticker, 
+                                             name_portfolio=portfolio['name'], 
+                                             base_currency=base_currency, 
+                                             rebalancing_period_days=rebalancing_period_days,
+                                             return_period_days=return_period_days,
+                                             target_weights= target_weights)
+        # Return the updated portfolio with optimized investments
+        return new_portfolio
+
