@@ -1,256 +1,279 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
-import yfinance as yf
 import logging
 import statsmodels.api as sm
+import yfinance as yf
+
 
 from analyzerportfolio.utils import (
     get_stock_info, 
     get_current_rate, 
     get_currency, 
     get_exchange_rate, 
-    convert_to_base_currency,
-    check_dataframe
+    convert_to_base_currency
 )
 
-def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str) -> pd.DataFrame:
-    """
-    Download stock and market data, convert to base currency, and return the processed data.
-    
-    Parameters:
-    tickers (list): List of stock tickers.
-    market_ticker (str): Market index ticker.
-    start_date (str): Start date for historical data.
-    end_date (str): End date for historical data.
-    base_currency (str): The base currency for the portfolio (e.g., 'USD').
 
-    Returns:
-    pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
+def c_total_return(portfolio: dict) -> float:
     """
-    exchange_rate_cache = {}
-    stock_data = pd.DataFrame()
-    
-    # Fetch and process each stock's data
-    for ticker in tickers:
-        data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
-        currency = get_currency(ticker)
-        if currency != base_currency:
-            exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
-            data = convert_to_base_currency(data, exchange_rate)
-        stock_data[ticker] = data
-    
-    # Fetch and process market index data
-    market_data = yf.download(market_ticker, start=start_date, end=end_date)['Adj Close']
-    market_currency = get_currency(market_ticker)
-    if market_currency != base_currency:
-        exchange_rate = get_exchange_rate(base_currency, market_currency, start_date, end_date, exchange_rate_cache)
-        market_data = convert_to_base_currency(market_data, exchange_rate)
-    
-    # Add market data to stock data
-    stock_data[market_ticker] = market_data
-    
-    # Drop rows with missing data to ensure alignment
-    stock_data = stock_data.dropna()
-    
-    return stock_data
-
-def calculate_daily_returns(stock_df:pd.DataFrame) -> pd.DataFrame:
-    """Calculate the daily returns from adjusted prices."""
-    if not pd.api.types.is_datetime64_any_dtype(stock_df.index):
-        raise ValueError("Index must be of datetime type")
-    return stock_df.pct_change().dropna()
-
-def calculate_portfolio_returns(investments:list[float], stock_returns:pd.DataFrame) -> pd.Series:
-    """
-    Calculate portfolio returns as a weighted sum of individual stock returns.
+    Calculate the return of a portfolio using monetary investments.
 
     Parameters:
-    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
+    portfolio (dict): Dictionary created from the create_portfolio function.
 
     Returns:
-    pd.Series: A pandas series containing portofolio returns. 
+    float: The return of the portfolio as a percentage.
     """
-    total_investment = sum(investments)
-    weights = np.array(investments) / total_investment
-    portfolio_returns = (stock_returns * weights).sum(axis=1)
 
-    return portfolio_returns.dropna()
+    # Extract the portfolio value at the beginning and end of the period
+    portfolio_value = portfolio['portfolio_value']
+    initial_value = portfolio_value.iloc[0]
+    final_value = portfolio_value.iloc[-1]
 
-def calculate_beta_and_alpha(data: pd.DataFrame, tickers: list[str], investments: list[float], market_ticker: str, risk_free_rate: float = 0.01) -> tuple:
+    # Calculate the return as the percentage change in portfolio value
+    return_percentage = (final_value - initial_value) / initial_value
+
+    return return_percentage
+
+def c_volatility(portfolio: dict) -> float:
+    """
+    Calculate the volatility of a portfolio using monetary investments.
+
+    Parameters:
+    portfolio (dict): Dictionary created from the create_portfolio function.
+
+    Returns:
+    float: The volatility of the portfolio as a percentage. (1Y)
+    """
+
+    # Extract the portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+
+    # Calculate the standard deviation of the portfolio returns
+    portfolio_std_dev = portfolio_returns.std()
+
+    # Annualize the standard deviation
+    return_period_days = portfolio['return_period_days']
+    annualization_factor = np.sqrt(252 / return_period_days)  # 252 trading days in a year
+    annualized_std_dev = portfolio_std_dev * annualization_factor
+
+    return annualized_std_dev
+
+def c_beta(portfolio: dict) -> tuple:
     """
     Calculate the beta and alpha of a portfolio using monetary investments.
 
     Parameters:
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers and the market index.
-    tickers (list): List of stock tickers in the portfolio.
-    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    market_ticker (str): The market index to compare against (e.g., S&P 500).
-    risk_free_rate (float): The risk-free rate to use in the alpha calculation (default is 1%).
+    portfolio (dict): Dictionary created from the create_portfolio function.
 
     Returns:
     tuple: A tuple containing the beta and alpha of the portfolio.
     """
 
-    if check_dataframe(data, tickers, investments, market_ticker):
 
-        # Calculate daily market and stock returns
-        market_returns = calculate_daily_returns(data[market_ticker])
-        stock_returns = calculate_daily_returns(data[tickers])
+    # Extract return period
+    days_return = int(portfolio['return_period_days'])
 
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+    # Extract returns and risk-free rates from the portfolio
+    portfolio_returns = portfolio['portfolio_returns']
+    market_returns = portfolio['market_returns']
+    risk_free_returns = portfolio['risk_free_returns']  # Ensure the key matches your data
 
-        # Convert the annual risk-free rate to a daily rate
-        daily_risk_free_rate = (1 + risk_free_rate) ** (1/252) - 1
+    # Align the data to ensure they have matching indices
+    portfolio_returns, market_returns = portfolio_returns.align(market_returns, join='inner')
+    portfolio_returns, risk_free_returns = portfolio_returns.align(risk_free_returns, join='inner')
+    market_returns, risk_free_returns = market_returns.align(risk_free_returns, join='inner')
 
-        # Excess returns
-        excess_portfolio_returns = portfolio_returns - daily_risk_free_rate
-        excess_market_returns = market_returns - daily_risk_free_rate
+    # Calculate excess returns
+    excess_portfolio_returns = portfolio_returns - risk_free_returns
+    excess_market_returns = market_returns - risk_free_returns
 
-        # Add a constant for the intercept in the regression model
-        X = sm.add_constant(excess_market_returns)
+    # Combine excess returns into a DataFrame and drop NaN values
+    data = pd.DataFrame({
+        'Excess_Portfolio_Returns': excess_portfolio_returns,
+        'Excess_Market_Returns': excess_market_returns
+    }).dropna()
 
-        # Perform linear regression to find alpha and beta
-        model = sm.OLS(excess_portfolio_returns, X).fit()
-        alpha = model.params['const']
-        beta = model.params[market_returns.name]
-        annualized_alpha = (1 + alpha) ** 252 - 1
+    # Prepare the independent and dependent variables for regression
+    X = sm.add_constant(data['Excess_Market_Returns'])
+    y = data['Excess_Portfolio_Returns']
 
-        return beta, annualized_alpha
+    # Perform linear regression to find alpha and beta
+    model = sm.OLS(y, X).fit()
 
-def calculate_sharpe_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], risk_free_rate: float = 0.01) -> float:
+    # Extract alpha and beta
+    alpha = model.params['const']
+    beta = model.params['Excess_Market_Returns']
+
+    # Annualize alpha
+    annualization_factor = 252 / days_return  # 252 trading days in a year
+    annualized_alpha = (1 + alpha) ** annualization_factor - 1
+
+    return beta, annualized_alpha
+
+def c_info_ratio(portfolio: dict) -> float:
+    """
+    Calculate the information ratio of a portfolio using monetary investments 
+
+    Parameters:
+    portofolio (dict): Dictionary created from the create_portfolio function
+
+    Returns:
+    float: The Information ratio of the portfolio
+    """
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+
+    # Extract market returns form the portfolio dictionary
+    market_returns = portfolio['market_returns']
+
+    # Ensure that the returns are aligned on the same dates
+    portfolio_returns, market_returns = portfolio_returns.align(market_returns, join='inner')
+
+    # Calculate excess returns
+    excess_returns = portfolio_returns - market_returns
+
+    # Calculate excess return std dev
+    excess_return_std_dev = excess_returns.std()
+
+    # Calculate the mean of the excess returns
+    mean_excess_return = excess_returns.mean()
+
+    # Get the return period from the portfolio
+    return_period_days = portfolio['return_period_days']
+    
+    # Annualization factor based on the return period
+    annualization_factor = 252 / return_period_days  # 252 trading days in a year
+
+    # Annualize the mean excess return
+    annualized_mean_excess_return = mean_excess_return * annualization_factor
+
+    # Annualize the excess return std dev 
+    annulized_excess_return_std_dev = excess_return_std_dev * annualization_factor
+
+    # Calculate the information raito
+    information_ratio = annualized_mean_excess_return / annulized_excess_return_std_dev
+
+    return information_ratio
+
+def c_sharpe(portfolio: dict) -> float:
     """
     Calculate the Sharpe ratio of a portfolio using monetary investments.
 
     Parameters:
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
-    tickers (list): List of stock tickers in the portfolio.
-    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    risk_free_rate (float): The risk-free rate to use in the Sharpe ratio calculation (default is 1%).
+    portfolio (dict): Dictionary created from the create_portfolio function.
 
     Returns:
     float: The Sharpe ratio of the portfolio.
     """
-    if check_dataframe(data, tickers, investments):
 
-        # Calculate daily returns
-        stock_returns = calculate_daily_returns(data[tickers]) 
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+    
+    # Extract risk-free returns from the portfolio dictionary
+    risk_free_returns = portfolio['risk_free_returns']
 
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
-        
-        # Calculate  portfolio standard deviation
-        portfolio_std_dev = portfolio_returns.std()
+    # Ensure that the returns are aligned on the same dates
+    portfolio_returns, risk_free_returns = portfolio_returns.align(risk_free_returns, join='inner')
 
-        trading_days = 252
-        annualized_std_dev = portfolio_std_dev * (trading_days ** 0.5)
+    # Calculate excess returns
+    excess_returns = portfolio_returns - risk_free_returns
 
-        # Calculate compounded return over the entire period
-        cumulative_return = (1 + portfolio_returns).prod()  # Product of (1 + daily returns)
+    # Calculate the mean of the excess returns
+    mean_excess_return = excess_returns.mean()
 
-        # Annualize the cumulative return
-        num_days = len(portfolio_returns)
-        annualized_return = cumulative_return ** (252 / num_days) - 1
+    # Calculate the standard deviation of the portfolio returns
+    portfolio_std_dev = portfolio_returns.std()
 
-        # Calculate Sharpe ratio
-        sharpe_ratio = (annualized_return - risk_free_rate) / annualized_std_dev        
-        return sharpe_ratio
+    # Get the return period from the portfolio
+    return_period_days = portfolio['return_period_days']
+    
+    # Annualization factor based on the return period
+    annualization_factor = 252 / return_period_days  # 252 trading days in a year
 
-def calculate_sortino_ratio(data: pd.DataFrame, tickers: list[str], investments: list[float], target_return: float = 0.0, risk_free_rate: float = 0.01) -> float:
+    # Annualize the mean excess return
+    annualized_mean_excess_return = mean_excess_return * annualization_factor
+
+    # Annualize the standard deviation
+    annualized_std_dev = portfolio_std_dev * np.sqrt(annualization_factor)
+
+    # Calculate the Sharpe ratio
+    sharpe_ratio = annualized_mean_excess_return / annualized_std_dev
+
+    return sharpe_ratio
+
+def c_sortino(portfolio: dict, target_return: float = 0.0) -> float:
     """
     Calculate the Sortino ratio of a portfolio using monetary investments.
 
     Parameters:
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
-    tickers (list): List of stock tickers in the portfolio.
-    investments (list): List of monetary investments for each stock (e.g., $1000 in AAPL, $2000 in MSFT).
-    target_return (float): The minimum acceptable return (MAR), often set to 0 or the risk-free rate.
-    risk_free_rate (float): The risk-free rate to use in the Sortino ratio calculation (default is 1%).
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+    - target_return (float, optional): The target return (minimum acceptable return). 
+      Defaults to 0.0, which considers only negative returns as downside risk.
 
     Returns:
-    float: The Sortino ratio of the portfolio.
+    - float: The Sortino ratio of the portfolio.
     """
-    if check_dataframe(data, tickers, investments):
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
     
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        stock_returns = calculate_daily_returns(data[tickers]) 
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+    # Ensure that the returns are aligned on the same dates
+    portfolio_returns = portfolio_returns.dropna()
+
+    # Create a Series with the target return, aligned with portfolio_returns
+    if isinstance(target_return, (float, int)):
+        target_return_series = pd.Series(target_return, index=portfolio_returns.index)
+    else:
+        # Assume target_return is a Series, align indices
+        portfolio_returns, target_return_series = portfolio_returns.align(target_return, join='inner')
+
+    # Calculate the differences between portfolio returns and target return
+    downside_diff = portfolio_returns - target_return_series
+
+    # Keep only negative differences (returns below target), set others to zero
+    downside_diff[downside_diff > 0] = 0
+
+    # Square the negative differences
+    squared_downside_diff = downside_diff ** 2
+
+    # Calculate the mean of the squared negative differences
+    mean_squared_downside_diff = squared_downside_diff.mean()
+
+    # Calculate the downside deviation
+    downside_deviation = np.sqrt(mean_squared_downside_diff)
+
+    # Calculate the mean portfolio return
+    mean_portfolio_return = portfolio_returns.mean()
+
+    # Get the return period from the portfolio
+    return_period_days = portfolio['return_period_days']
     
-       # Calculate the compounded return over the period
-        cumulative_return = (1 + portfolio_returns).prod()  # Calculate cumulative return
-        num_days = len(portfolio_returns)
-        
-        # Annualize the portfolio return
-        annualized_return = cumulative_return ** (252 / num_days) - 1
-        
-        # Calculate downside deviation
-        downside_deviation = np.sqrt(np.mean(np.minimum(0, portfolio_returns - target_return) ** 2))
-        
-        trading_days = 252
-        annualized_downside_deviation = downside_deviation * np.sqrt(trading_days)
-        
-        
-        # Calculate Sortino ratio
-        sortino_ratio = (annualized_return - risk_free_rate) / annualized_downside_deviation
-        
-        return sortino_ratio
+    # Annualization factor based on the return period
+    annualization_factor = 252 / return_period_days  # Adjust if necessary
 
-def calculate_var(data: pd.DataFrame, tickers: list[str], investments: list[float], confidence_level: float = 0.95, time_horizon: int = 1, method: str = 'parametric') -> float:
-    """
-    Calculate the Value at Risk (VaR) of a portfolio using either the Parametric or Historical method.
+    # Annualize the mean portfolio return
+    annualized_mean_return = mean_portfolio_return * annualization_factor
 
-    Parameters:
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
-    tickers (list): List of stock tickers in the portfolio.
-    investments (list): List of monetary investments for each stock.
-    confidence_level (float): Confidence level for VaR (default is 95%).
-    time_horizon (int): Time horizon in days for VaR calculation (default is 1 day).
-    method (str): Method to calculate VaR, either 'parametric' or 'historical' (default is 'parametric').
+    # Annualize the target return
+    annualized_target_return = target_return * annualization_factor
 
-    Returns:
-    float: The Value at Risk (VaR) of the portfolio in monetary terms.
-    """
-    if check_dataframe(data, tickers, investments):
+    # Annualize the downside deviation
+    annualized_downside_deviation = downside_deviation * np.sqrt(annualization_factor)
 
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        stock_returns = calculate_daily_returns(data[tickers]) 
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
+    # Calculate the Sortino ratio
+    sortino_ratio = (annualized_mean_return - annualized_target_return) / annualized_downside_deviation
 
-        #Total monetary amount invested
-        total_investment = sum(investments)
+    return sortino_ratio
 
-        if method == 'parametric':
-            # Calculate the mean and standard deviation of portfolio returns
-            mean_return = portfolio_returns.mean()
-            std_dev = portfolio_returns.std()
-            
-            # Z-score for the given confidence level
-            z_score = norm.ppf(1 - confidence_level)
-            
-            # Calculate Parametric VaR scaled by sqrt(T)
-            var = (z_score * std_dev * np.sqrt(time_horizon)) * total_investment
-        
-        elif method == 'historical':
-            # Calculate rolling T-day returns
-            t_day_returns = portfolio_returns.rolling(window=time_horizon).apply(lambda x: np.prod(1 + x) - 1).dropna()
-            
-            # Calculate Historical VaR
-            var = np.percentile(t_day_returns, (1 - confidence_level) * 100) * total_investment
-        
-        else:
-            raise ValueError("Method must be either 'parametric' or 'historical'.")
-        
-        return abs(var)
-
-def calculate_portfolio_scenarios(tickers: list[str], investments: list[float], base_currency: str ='USD') -> dict:
+def c_analyst_scenarios(portfolio) -> dict:
     """
     Calculate the portfolio value in different scenarios based on analyst target prices.
 
     Parameters:
-    tickers (list): List of stock tickers.
-    investments (list): Corresponding investment amounts for each ticker.
-    base_currency (str): The base currency for calculating portfolio value (default is 'USD').
+    - portfolio (dict): Dictionary created from the create_portfolio function.
 
     Returns:
     dict: Portfolio values in low, mean, median, and high scenarios.
@@ -259,6 +282,10 @@ def calculate_portfolio_scenarios(tickers: list[str], investments: list[float], 
     portfolio_value_mean = 0
     portfolio_value_median = 0
     portfolio_value_high = 0
+
+    tickers = portfolio['tickers']
+    investments = portfolio['investments']
+    base_currency = portfolio['base_currency']
 
     #Ensure there is a position in all tickers
     if len(tickers) != len(investments):
@@ -296,74 +323,12 @@ def calculate_portfolio_scenarios(tickers: list[str], investments: list[float], 
         'High Scenario': portfolio_value_high
     }
 
-def calculate_dividend_yield(tickers: list[str], investments: list[float]) -> float:
-    """
-    Calculate the overall dividend yield of the portfolio.
-
-    Parameters:
-    tickers (list): List of stock tickers.
-    investments (list): Corresponding investment amounts for each ticker.
-
-    Returns:
-    float: The overall dividend yield of the portfolio as a percentage.
-    """
-
-    #Ensure there is a position in all tickers
-    if len(tickers) != len(investments):
-        raise ValueError("The number of tickers must match the number of investments.")
-    
-    total_investment = sum(investments)
-    weighted_dividend_yield = 0
-
-    for ticker, investment in zip(tickers, investments):
-        stock_info = get_stock_info(ticker)
-        dividend_yield = stock_info.get('dividendYield', 0)
-
-        if dividend_yield is None:
-            continue  # Skip this stock if dividend yield is not available
-
-        # Calculate the weight of this stock in the portfolio
-        weight = investment / total_investment
-
-        # Calculate the contribution to the overall dividend yield
-        weighted_dividend_yield += weight * dividend_yield
-
-    return weighted_dividend_yield
-
-def calculate_max_drawdown(data: pd.DataFrame, tickers: list[str], investments: list[float]) -> float:
-    """
-    Calcualte maxdrawdawn of the portfolio
-
-    Parameters: 
-    data (pd.DataFrame): DataFrame containing adjusted and converted prices for all tickers.
-    tickers (list): List of stock tickers.
-    investments (list): Corresponding investment amounts for each ticker.
-
-    Returns:
-    float: The overall maxdrawdown of the portfolio as a percentage.
-    """ 
-
-    if check_dataframe(data, tickers, investments):
-
-        # Calculate portfolio returns as a weighted sum of individual stock returns
-        stock_returns = calculate_daily_returns(data[tickers]) 
-        portfolio_returns = calculate_portfolio_returns(investments, stock_returns)
-    
-        cumulative_portfolio_return = (1 + portfolio_returns).cumprod()
-        cumulative_portfolio_returns_max = cumulative_portfolio_return.cummax()
-
-        drawdown = (cumulative_portfolio_return - cumulative_portfolio_returns_max) / cumulative_portfolio_returns_max
-        max_drawdown = min(drawdown[1:])
-
-        return max_drawdown
-    
-def calculate_analyst_suggestion(tickers: list[str], investments: list[float]) -> dict:
+def c_analyst_score(portfolio) -> dict:
     """
     Calculate the weighted average analyst suggestion for a portfolio based on Yahoo Finance data. 1 is a strong buy and 5 is a strong sell.
 
     Parameters:
-    tickers (list[str]): A list of stock tickers in the portfolio.
-    investments (list[float]): A list of investment amounts corresponding to each stock in the portfolio.
+    - portfolio (dict): Dictionary created from the create_portfolio function.
 
     Returns:
     dict: A dictionary containing individual ticker suggestions and the weighted average suggestion for the portfolio.
@@ -371,6 +336,10 @@ def calculate_analyst_suggestion(tickers: list[str], investments: list[float]) -
     suggestions = []
     weighted_suggestions = []
     adjusted_investments = []
+
+    tickers = portfolio['tickers']
+    investments = portfolio['investments']
+
     # Set up basic configuration for logging
     logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
     for ticker, investment in zip(tickers, investments):
@@ -408,87 +377,103 @@ def calculate_analyst_suggestion(tickers: list[str], investments: list[float]) -
         "weighted_average_suggestion": weighted_average_suggestion
     }
 
-def calculate_portfolio_metrics(
-    price_df: pd.DataFrame,
-    tickers: list[str],
-    investments: list[float], 
-    start_date_report: str = None,  # Optional parameter for calculating returns from a start date
-    investment_at_final_date: bool = True,  # Indicates if investments are based on the final date
-    market_ticker: str = '^GSPC',
-    risk_free_rate: float = 0.01
-) -> dict:
+def c_dividend_yield(portfolio : dict) -> float:
     """
-    Calculate portfolio metrics and returns.
+    Calculate the overall dividend yield of the portfolio.
 
     Parameters:
-    price_df (pd.DataFrame): A DataFrame containing the historical price data of the stocks in the portfolio.
-    tickers (list[str]): A list of stock tickers in the portfolio.
-    investments (list[float]): A list of investment amounts corresponding to each stock in the portfolio.
-    start_date_report (str, optional): The start date of the report to calculate returns in the format 'YYYY-MM-DD'.
-    investment_at_final_date (bool): Whether investments are based on the final date. If False, uses the start date.
-    market_ticker (str, optional): The ticker symbol of the market index to compare the portfolio against. Default is '^GSPC' (S&P 500).
-    risk_free_rate (float, optional): The risk-free rate used in calculating the Sharpe and Sortino ratios. Default is 0.01 (1%).
+    portfolio: dict created from the create_portfolio function.
 
     Returns:
-    dict: A dictionary containing the calculated metrics and other data.
+    float: The overall dividend yield of the portfolio as a percentage.
     """
-    # Determine the last available date in the price data
-    last_day = price_df.index[-1].strftime('%Y-%m-%d')
-    first_day = price_df.index[0].strftime('%Y-%m-%d')
 
-    # Use the start_date_report if provided; otherwise, use the first available date
-    start_date = start_date_report if start_date_report else first_day
+    tickers = portfolio['tickers']
+    investments = portfolio['investments']
 
-    # Calculate the number of shares for each stock
-    if investment_at_final_date:
-        shares = [investment / price_df[ticker].loc[last_day] for ticker, investment in zip(tickers, investments)]
+    #Ensure there is a position in all tickers
+    if len(tickers) != len(investments):
+        raise ValueError("The number of tickers must match the number of investments.")
+    
+    total_investment = sum(investments)
+    weighted_dividend_yield = 0
+
+    for ticker, investment in zip(tickers, investments):
+        stock_info = get_stock_info(ticker)
+        dividend_yield = stock_info.get('dividendYield', 0)
+
+        if dividend_yield is None:
+            continue  # Skip this stock if dividend yield is not available
+
+        # Calculate the weight of this stock in the portfolio
+        weight = investment / total_investment
+
+        # Calculate the contribution to the overall dividend yield
+        weighted_dividend_yield += weight * dividend_yield
+
+    return weighted_dividend_yield
+
+def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None) -> float:
+    """
+    Calculate the Value at Risk (VaR) of a portfolio using the historical method.
+
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+    - confidence_level (float, optional): The confidence level for the VaR calculation. 
+      Defaults to 0.95 (95% confidence).
+    - horizon_days (int, optional): The number of days ahead for the VaR calculation. 
+      Defaults to 1 day.
+    - method (str, optional): The method used to calculate VaR. historical or parametric. Historical by default.
+    - portfolio_value (int, optional): The value of the portfolio. If not provided, the VaR will be calculated based on the last portfolio value.
+
+    Returns:
+    - float: The Value at Risk (VaR) of the portfolio at the specified confidence level 
+      and time horizon.
+    """
+    return_days = portfolio['return_period_days']
+
+    if portfolio_value is None:
+        # Extract the last portfolio value from the portfolio dictionary
+        portfolio_value = portfolio['portfolio_value'].iloc[-1]
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+    if method == "historical":
+        # Calculate the daily Value at Risk (VaR) using the historical method
+        VaR = portfolio_returns.quantile(1 - confidence_level)
+    elif method == "parametric":
+        # Calculate the mean and standard deviation of the portfolio returns
+        mean_return = portfolio_returns.mean()
+        std_dev = portfolio_returns.std()
+
+        # Calculate the z-score for the specified confidence level
+        z_score = norm.ppf(confidence_level)
+
+        # Calculate the Value at Risk (VaR) using the parametric method
+        VaR = mean_return - z_score * std_dev
     else:
-        shares = [investment / price_df[ticker].loc[start_date] for ticker, investment in zip(tickers, investments)]
+        raise ValueError("Invalid method. Choose 'historical' or 'parametric'.")
 
-    # Calculate portfolio values
-    portfolio_initial_value = sum(price_df[ticker].loc[start_date] * share for ticker, share in zip(tickers, shares))
-    portfolio_final_value = sum(price_df[ticker].loc[last_day] * share for ticker, share in zip(tickers, shares))
+    # Annualize the VaR for the specified time horizon
+    VaR_annualized = VaR * np.sqrt(horizon_days/return_days) * portfolio_value
 
-    # Calculate market and portfolio returns from the start_date_report to the last available day
-    market_return = (price_df[market_ticker].loc[last_day] / price_df[market_ticker].loc[start_date] - 1) * 100
-    portfolio_return = (portfolio_final_value / portfolio_initial_value - 1) * 100
+    return abs(VaR_annualized)
 
-    # Calculate portfolio metrics
-    beta, alpha = calculate_beta_and_alpha(price_df, tickers, investments, market_ticker)
-    sharpe_ratio = calculate_sharpe_ratio(price_df, tickers, investments, risk_free_rate)
-    sortino_ratio = calculate_sortino_ratio(price_df, tickers, investments, risk_free_rate)
-    var = calculate_var(price_df, tickers, investments)
-    max_drawdown = calculate_max_drawdown(price_df, tickers, investments)
-    dividend_yield = calculate_dividend_yield(tickers, investments)
+def c_max_drawdown(portfolio: dict) -> float:
+    """
+    Calculate the maximum drawdown of a portfolio.
 
-    # Calculate individual stock returns and monetary surplus/deficit
-    stock_details = []
-    for ticker, investment, share in zip(tickers, investments, shares):
-        initial_value = share * price_df[ticker].loc[start_date]
-        final_value = share * price_df[ticker].loc[last_day]
-        stock_return = (final_value / initial_value - 1) * 100
-        surplus_or_deficit = final_value - initial_value
-        stock_details.append({
-            "ticker": ticker,
-            "initial_value": initial_value,
-            "final_value": final_value,
-            "return": stock_return,
-            "surplus_or_deficit": surplus_or_deficit
-        })
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
 
-    return {
-        "last_day": last_day,
-        "first_metric_day": first_day,
-        "portfolio_initial_value": portfolio_initial_value,
-        "portfolio_final_value": portfolio_final_value,
-        "portfolio_return": portfolio_return,
-        "market_return": market_return,
-        "beta": beta,
-        "alpha": alpha,
-        "sharpe_ratio": sharpe_ratio,
-        "sortino_ratio": sortino_ratio,
-        "var": var,
-        "max_drawdown": max_drawdown,
-        "dividend_yield": dividend_yield,
-        "stock_details": stock_details
-    }
+    Returns:
+    - float: The maximum drawdown of the portfolio.
+    """
+    portfolio_value = portfolio['portfolio_value']
+    peak = portfolio_value.cummax()
+    drawdown = ((portfolio_value - peak) / peak)
+
+    # Calculate the maximum drawdown as the minimum value in the drawdown series
+    max_drawdown = -drawdown.min()
+
+    return max_drawdown
