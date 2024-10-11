@@ -21,6 +21,11 @@ from analyzerportfolio.metrics import (
     c_info_ratio
     )
 
+from analyzerportfolio.graphics import (
+    portfolio_value,
+    garch
+)
+
 import os
 import pandas as pd
 
@@ -59,4 +64,9 @@ if True:
         print(information_ratio1)
         print(information_ratio_optimized)
         print(read_portfolio_composition(portfolio_optimized,min_value = 0.001))
+
+        garch([portfolio_optimized])
+        portfolio_value([portfolio_optimized])
+
+
 
