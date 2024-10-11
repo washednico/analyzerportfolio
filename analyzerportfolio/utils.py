@@ -105,6 +105,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
     use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. 
     folder_path (str): Path to the folder where the cache will be stored. Default is None. 
+    
 
     Returns:
     pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
@@ -267,6 +268,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 
                 else:
                     data = ticker_data[(ticker_data.index >= start_date) & (ticker_data.index <= end_date)]
+                    
                 
                 stock_data[ticker] = ticker_data
                         
@@ -316,8 +318,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     if interest_data is not None:
         # Merge on index
         dataframe = stock_data.join(interest_data, how='inner')
-        # Drop rows with missing data to ensure alignment
-        dataframe.dropna(inplace=True)
+        
         return dataframe
     else:
         return None
@@ -336,6 +337,8 @@ def create_portfolio(
     return_period_days : int = 1,
     rebalancing_period_days: int = None,
     target_weights: list[float] = None,
+    exclude_ticker_time: int = 7,
+    exclude_ticker: bool = False
 ) -> pd.DataFrame:
     """
     Calculates returns and value amounts for specified stocks over a return period,
@@ -356,6 +359,8 @@ def create_portfolio(
                      If provided, market returns and values will be calculated.
     - target_weights: Optional list or array of target weights (should sum to 1).
                       If not provided, it will be calculated from the initial investments.
+    - exclude_ticker_time (int): if ticker is not available withing +- x days from start date, exclude it. Default is 7.
+    - exclude_ticker (bool): Apply the exclusion of tickers based on the exclude_ticker_time parameter. Default is False.
 
     Returns:
     - returns_df: DataFrame containing:
@@ -364,6 +369,40 @@ def create_portfolio(
         - 'Rebalanced_Portfolio_Returns' and 'Rebalanced_Portfolio_Value' columns (if rebalancing is performed).
         - 'Market_Returns' and 'Market_Value' columns (if market_ticker is provided).
     """
+    # Configure the logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    def count_initial_nans(series):
+        count = 0
+        for value in series:
+            if pd.isna(value):
+                count += 1
+            else:
+                break
+        return count
+
+    if exclude_ticker:
+        # Create a list of tickers to exclude based on consecutive NaNs at the start
+        to_exclude = [ticker for ticker in tickers if count_initial_nans(data[ticker]) > exclude_ticker_time]
+        
+        # Loop through the tickers to be excluded
+        for ticker in to_exclude:
+            # Find the index before modifying the tickers list
+            index = tickers.index(ticker)
+            
+            # Remove the ticker from tickers and investments based on the index
+            tickers.pop(index)
+            investments.pop(index)
+            
+            # Log the exclusion message
+            print(f"{ticker} has been excluded from the portfolio due to missing data.")
+            data.drop(columns=ticker, inplace=True)
+        
+        # Now drop NaN values from the remaining data
+        data.dropna(inplace=True)
+    else:
+        data.dropna(inplace=True)
+
     # Ensure investments and target_weights are numpy arrays
     investments = np.array(investments)
     total_investment = investments.sum()
@@ -385,10 +424,10 @@ def create_portfolio(
         raise ValueError(f"The following tickers are missing in the data: {missing_tickers}")
     if market_ticker and market_ticker not in data.columns:
         raise ValueError(f"Market ticker '{market_ticker}' is not present in the data.")
-
+    
     # Select data for the specified tickers
     stock_data = data[tickers]
-
+    
     # Calculate returns for each stock over the specified return period
     stock_returns = stock_data.pct_change(return_period_days)
 
@@ -411,16 +450,7 @@ def create_portfolio(
     # Create a DataFrame to store returns and values
     returns_df = pd.DataFrame(index=stock_data.index)
     
-    # Add stock returns
-    columns_to_add = {
-                        **{f'{ticker}_Return': stock_returns[ticker] for ticker in tickers},
-                        **{f'{ticker}_Value': stock_values[ticker] for ticker in tickers},
-                        'Portfolio_Returns': portfolio_returns,
-                        'Portfolio_Value': portfolio_values,
-                    }
 
-# Create a new DataFrame with these columns
-    returns_df = pd.DataFrame(columns_to_add, index=stock_data.index)
 
     # ----- Portfolio With Auto-Rebalancing (if rebalancing_period_days is provided) -----
     if rebalancing_period_days is not None:
@@ -477,9 +507,6 @@ def create_portfolio(
         market_shares = total_investment / initial_market_price
         market_values = market_data * market_shares
 
-        # Add market returns and values to the DataFrame
-        returns_df['Market_Returns'] = market_returns
-        returns_df['Market_Value'] = market_values
 
     # ----- Interest Rate Adjustments -----
 
@@ -501,7 +528,22 @@ def create_portfolio(
     )
 
     # Add risk-free return to returns_df
-    returns_df['Risk_Free_Return'] = data['risk_free_return']
+    
+
+        # Add stock returns
+    columns_to_add = {
+                        **{f'{ticker}_Return': stock_returns[ticker] for ticker in tickers},
+                        **{f'{ticker}_Value': stock_values[ticker] for ticker in tickers},
+                        'Portfolio_Returns': portfolio_returns,
+                        'Portfolio_Value': portfolio_values,
+                        'Risk_Free_Return' : data['risk_free_return'],
+                        # Add market returns and values to the DataFrame
+                        'Market_Returns' : market_returns,
+                        'Market_Value' : market_values
+                    }
+
+# Create a new DataFrame with these columns
+    returns_df = pd.DataFrame(columns_to_add, index=stock_data.index)
     
 
     # Drop rows with all NaN values (if any)

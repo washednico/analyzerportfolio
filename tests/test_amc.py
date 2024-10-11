@@ -38,11 +38,12 @@ if True:
         list_etf = pd.read_csv(r"/Users/nicolafochi/Desktop/cache/etf/etf_info_sort.csv", sep=";")
 
         for index, row in list_etf.iterrows():
-            ticker.append(row["Ticker\n"].split(" ")[0])
-            investments.append(100000)
+            
+                ticker.append(row["Ticker\n"].split(" ")[0])
+                investments.append(100000)
 
-            if len(ticker) == 80:
-                break
+                if len(ticker) == 80:
+                    break
 
 
         start_date = '2022-08-27'
@@ -54,7 +55,8 @@ if True:
         
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
-        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, rebalancing_period_days=30)
+        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7)
+        
 
         information_ratio1 = c_info_ratio(portfolio_1)
         print(information_ratio1)
@@ -65,8 +67,10 @@ if True:
         print(information_ratio_optimized)
         print(read_portfolio_composition(portfolio_optimized,min_value = 0.001))
 
-        garch([portfolio_optimized])
-        portfolio_value([portfolio_optimized])
+        garch(portfolio_optimized)
+        portfolio_value(portfolio_optimized)
+
+
 
 
 
