@@ -51,14 +51,14 @@ if True:
                 ticker.append(etf)
                 investments.append(100000)
 
-        ticker = ["CSPX.L", "IWDA.L","EIMI.L","SGLD.L","IEAC.L","IMAE.AS","EQQQ.MI","XZMU.L"]
+        ticker = ["CSPX.L", "IWDA.L","EIMI.L","SGLD.L","IEAC.L","IMAE.AS","EQQQ.MI","XZMU.L","1674.T"]
         
         
         for i in ticker:
             investments.append(100000)
 
 
-        start_date = '2022-08-27'
+        start_date = '2020-08-27'
         end_date = '2024-08-28'
         market_ticker = 'benchmark'
         base_currency = 'USD'
