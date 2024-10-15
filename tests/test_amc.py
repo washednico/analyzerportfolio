@@ -35,15 +35,27 @@ if True:
         
         ticker = []
         investments = []
-        list_etf = pd.read_csv(r"/Users/nicolafochi/Desktop/cache/etf/etf_info_sort.csv", sep=";")
 
-        for index, row in list_etf.iterrows():
+        if False:
+            list_etf = pd.read_csv(r"/Users/nicolafochi/Desktop/cache/etf/etf_info_sort.csv", sep=";")
+
+            for index, row in list_etf.iterrows():
+                
+                    ticker.append(row["Ticker\n"].split(" ")[0])
+                    investments.append(100000)
+
+                    if len(ticker) == 80:
+                        break
             
-                ticker.append(row["Ticker\n"].split(" ")[0])
+            for etf in ["CSSPX.MI", "EIMI.SW", "SGLD.MI","IBC1.MU"]:
+                ticker.append(etf)
                 investments.append(100000)
 
-                if len(ticker) == 80:
-                    break
+        ticker = ["CSPX.L", "IWDA.L","EIMI.L","SGLD.L","IEAC.L","IMAE.AS","EQQQ.MI","XZMU.L"]
+        
+        
+        for i in ticker:
+            investments.append(100000)
 
 
         start_date = '2022-08-27'
@@ -55,7 +67,7 @@ if True:
         
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
-        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7)
+        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
         
 
         information_ratio1 = c_info_ratio(portfolio_1)

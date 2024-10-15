@@ -151,7 +151,7 @@ def c_info_ratio(portfolio: dict) -> float:
     annualized_mean_excess_return = mean_excess_return * annualization_factor
 
     # Annualize the excess return std dev 
-    annulized_excess_return_std_dev = excess_return_std_dev * annualization_factor
+    annulized_excess_return_std_dev = excess_return_std_dev * np.sqrt(annualization_factor)
 
     # Calculate the information raito
     information_ratio = annualized_mean_excess_return / annulized_excess_return_std_dev
