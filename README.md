@@ -178,7 +178,7 @@ info_optimized = c_info_ratio(portfolio_optimized)
 
 print("Information Ratio before optimization: ", information_ratio1)
 print("Information Ratio optimization: ", info_optimized)
-```python
+```
 
 
 ## Current requirements
