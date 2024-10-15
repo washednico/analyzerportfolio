@@ -170,6 +170,16 @@ ap.probability_cone(portfolio_1, time_horizon=1000)
 ### Output Probability Cone
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/img14.png?raw=true)
 
+### Optimization Module
+```python
+information_ratio1 = c_info_ratio(portfolio_1)
+portfolio_optimized = optimize(portfolio_1, metric='information_ratio')
+info_optimized = c_info_ratio(portfolio_optimized)
+
+print("Information Ratio before optimization: ", information_ratio1)
+print("Information Ratio optimization: ", info_optimized)
+```
+
 
 ## Current requirements
 ```text
