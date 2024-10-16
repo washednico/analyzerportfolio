@@ -23,7 +23,8 @@ from analyzerportfolio.metrics import (
 
 from analyzerportfolio.graphics import (
     portfolio_value,
-    garch
+    garch,
+    garch_diff
 )
 
 import os
@@ -51,12 +52,14 @@ if True:
                 ticker.append(etf)
                 investments.append(100000)
 
-        ticker = ["CSPX.L", "IWDA.L","EIMI.L","SGLD.L","IEAC.L","IMAE.AS","EQQQ.MI","XZMU.L","1674.T"]
+        ticker = ["CSPX.L", "IWDA.L","EIMI.L","IEAC.L","IMAE.AS","EQQQ.MI",
+                  "XZMU.L","1674.T","SLVR.DE","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
+                  "IMEU.AS", "XDEW.MI", "QDVE.DE", "DGRW", "ITA", "FNDX", "FDVV", "MLPX",
+                  "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L","SLV","DYNF"]
         
         
         for i in ticker:
             investments.append(100000)
-
 
         start_date = '2020-08-27'
         end_date = '2024-08-28'
@@ -71,16 +74,20 @@ if True:
         
 
         information_ratio1 = c_info_ratio(portfolio_1)
-        print(information_ratio1)
+        
 
         portfolio_optimized = optimize(portfolio_1, metric='information_ratio')
         information_ratio_optimized = c_info_ratio(portfolio_optimized)
-        print(information_ratio1)
-        print(information_ratio_optimized)
+        print("Information ratio before ", information_ratio1)
+        print("Information ratio after ",information_ratio_optimized)
+        print("Sharpe ratio after ", c_sharpe(portfolio_optimized))
         print(read_portfolio_composition(portfolio_optimized,min_value = 0.001))
 
-        garch(portfolio_optimized)
+        garch(portfolio_optimized, plot_difference=True)
         portfolio_value(portfolio_optimized)
+
+        garch_diff(portfolio_optimized)
+
 
 
 

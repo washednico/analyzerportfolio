@@ -115,7 +115,8 @@ def garch(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
     market_color: str = 'green',
-    plot: bool = True
+    plot: bool = True,
+    plot_difference: bool = False
 ) -> pd.DataFrame:
     """
     Compare the GARCH volatilities of one or multiple portfolios and plot the comparison.
@@ -228,6 +229,27 @@ def garch(
             name=name,
             line=dict(color=color) if color else {}
         ))
+
+        if plot_difference == True:
+                # Calculate the difference between portfolio and market GARCH volatilities
+            if market_returns is not None:
+                # Align the portfolio and market volatilities for the same date range
+                aligned_portfolio_vol, aligned_market_vol = forecasted_volatility.align(m_forecasted_volatility, join='inner')
+
+                # Calculate the volatility difference
+                vol_diff = aligned_portfolio_vol - aligned_market_vol
+
+                # Add the volatility difference series to the volatility_df DataFrame
+                volatility_df[f'{name} - {market_name}'] = vol_diff
+
+                # Add a trace for the volatility difference
+                fig.add_trace(go.Scatter(
+                    x=vol_diff.index,
+                    y=vol_diff,
+                    mode='lines',
+                    name=f'{name} - {market_name}',
+                    line=dict(dash='dash', color=color if color else 'gray')
+                ))
 
     # Align all series by their dates
     volatility_df = volatility_df.dropna()
@@ -819,3 +841,126 @@ def probability_cone(
         fig.show()
 
     return probability_cone_df
+
+
+def garch_diff(
+    portfolios: Union[dict, List[dict]],
+    colors: Union[str, List[str]] = None,
+    market_color: str = 'green',
+    plot: bool = True
+) -> pd.DataFrame:
+    """
+    Compare the GARCH volatilities of the difference between portfolio returns and market returns.
+    Plot the comparison of volatilities.
+
+    Parameters:
+    - portfolios (dict or list of dict): Portfolio dictionary or list of portfolio dictionaries
+      created from the create_portfolio function.
+    - colors (str or list[str], optional): Color or list of colors for each portfolio plot line.
+    - market_color (str, optional): Color for the market volatility plot line (default is 'green').
+    - plot (bool, optional): Whether to plot the results (default is True).
+
+    Returns:
+    - pd.DataFrame: A DataFrame with the GARCH volatilities of the portfolio-market return differences (divided by 100).
+    """
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    # Ensure colors is a list
+    if colors is None:
+        colors = [None] * len(portfolios)
+    elif isinstance(colors, str):
+        colors = [colors]
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        raise ValueError("Invalid type for 'colors' parameter.")
+
+    # Initialize an empty DataFrame to hold volatilities
+    volatility_df = pd.DataFrame()
+
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Check if portfolios are passed
+    if len(portfolios) > 0:
+        # Extract market returns from the first portfolio if available
+        market_returns = portfolios[0].get('market_returns', None)
+        market_name = portfolios[0].get('market_ticker', 'Market')
+
+        if market_returns is not None:
+            # Clean market_returns
+            market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna()
+
+            # Ensure market_returns is a Pandas Series
+            if isinstance(market_returns, pd.DataFrame):
+                market_returns = market_returns.squeeze()
+
+            # Sort the index to ensure proper alignment
+            market_returns = market_returns.sort_index()
+
+            # Multiply returns by 100 to convert to percentage
+            market_returns_pct = market_returns * 100
+
+    # Iterate over each portfolio and corresponding color
+    for portfolio, color in zip(portfolios, colors):
+        # Extract portfolio returns and name
+        portfolio_returns = portfolio['portfolio_returns']
+        name = portfolio['name']
+
+        # Clean portfolio_returns
+        portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
+
+        # Ensure portfolio_returns is a Pandas Series
+        if isinstance(portfolio_returns, pd.DataFrame):
+            portfolio_returns = portfolio_returns.squeeze()
+
+        # Sort the index to ensure proper alignment
+        portfolio_returns = portfolio_returns.sort_index()
+
+        # Align portfolio returns with market returns
+        aligned_portfolio, aligned_market = portfolio_returns.align(market_returns, join='inner')
+
+        # Calculate the difference between portfolio returns and market returns
+        diff_returns = (aligned_portfolio - aligned_market)
+
+        # Multiply returns by 100 to convert to percentage
+        diff_returns_pct = diff_returns * 100
+
+        # Fit a GARCH(1,1) model to the portfolio-market return difference
+        model = arch_model(diff_returns_pct, vol='Garch', p=1, q=1, rescale=False)
+        model_fit = model.fit(disp='off')
+
+        # Get the conditional volatility and divide by 100
+        forecasted_volatility = model_fit.conditional_volatility / 100
+
+        # Add the volatility series to the volatility_df DataFrame
+        volatility_df[name] = forecasted_volatility
+
+        # Add a trace to the figure with the specified color
+        fig.add_trace(go.Scatter(
+            x=forecasted_volatility.index,
+            y=forecasted_volatility,
+            mode='lines',
+            name=name,
+            line=dict(color=color) if color else {}
+        ))
+
+    # Align all series by their dates
+    volatility_df = volatility_df.dropna()
+
+    # Update figure layout
+    fig.update_layout(
+        title="Comparison of GARCH Volatilities (Portfolio Returns - Market Returns)",
+        xaxis_title="Date",
+        yaxis_title="Volatility",
+        template="plotly_dark"
+    )
+
+    # Display the plot
+    if plot:
+        fig.show()
+
+    return volatility_df

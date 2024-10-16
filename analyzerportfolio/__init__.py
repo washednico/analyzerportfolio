@@ -26,6 +26,7 @@ from .graphics import heatmap
 from .graphics import distribution_return
 from .graphics import simulate_dca
 from .graphics import probability_cone
+from .graphics import garch_diff
 
 from .ai import monitor_news
 
