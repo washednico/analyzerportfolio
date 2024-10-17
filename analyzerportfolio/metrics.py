@@ -36,9 +36,30 @@ def c_total_return(portfolio: dict) -> float:
 
     return return_percentage
 
+def c_return(portfolio: dict) -> float:
+    """
+    Calculate the annual return of a portfolio using monetary investments.
+    """
+    # Extract the portfolio value at the beginning and end of the period
+    portfolio_value = portfolio['portfolio_value']
+    initial_value = portfolio_value.iloc[0]
+    final_value = portfolio_value.iloc[-1]
+
+    # Calculate the return as the percentage change in portfolio value
+    return_percentage = (final_value - initial_value) / initial_value
+
+    # Extract the return period from the portfolio
+    return_period_days = len(portfolio_value)
+
+    # Annualize the return
+    annualization_factor = 252 / return_period_days  # 252 trading days in a year
+    annualized_return = (1 + return_percentage) ** annualization_factor - 1
+
+    return annualized_return
+
 def c_volatility(portfolio: dict) -> float:
     """
-    Calculate the volatility of a portfolio using monetary investments.
+    Calculate the annual volatility of a portfolio using monetary investments.
 
     Parameters:
     portfolio (dict): Dictionary created from the create_portfolio function.

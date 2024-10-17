@@ -1,6 +1,13 @@
 import analyzerportfolio as ap
 import numpy as np
 from scipy.optimize import minimize
+import plotly.graph_objects as go
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import multiprocessing
+import pandas as pd
+
+
+
 
 def optimize(portfolio: dict, 
              metric: str = 'sharpe'):
@@ -103,6 +110,7 @@ def optimize(portfolio: dict,
         # Calculate the Information ratio
         information_ratio = ap.c_info_ratio(updated_portfolio)
         return -information_ratio
+
     
     # Constraints: the weights must sum to 1
     constraints = ({'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1})
@@ -187,3 +195,282 @@ def optimize(portfolio: dict,
         # Return the updated portfolio with optimized investments
         return new_portfolio
 
+
+# Move this function outside efficient_frontier so it's picklable
+def minimize_volatility_for_target_return(args):
+    (
+        target_return,
+        data,
+        tickers,
+        total_investment,
+        initial_weights,
+        bounds,
+        constraints,
+        portfolio_return,
+        volatility_objective,
+        method,
+    ) = args
+
+    # Constraint: portfolio expected return equals target_return
+    return_constraint = {
+        'type': 'eq',
+        'fun': lambda weights: portfolio_return(weights) - target_return
+    }
+
+    result = minimize(
+        volatility_objective,
+        initial_weights,
+        method=method,
+        bounds=bounds,
+        constraints=[constraints, return_constraint]
+    )
+    return result
+
+# Top-level function for the weight sum constraint
+def weight_sum_constraint(weights):
+    return np.sum(weights) - 1
+
+# Top-level function for the return constraint
+def return_constraint_function(weights, target_return, data, tickers, total_investment, other_params):
+    ret = portfolio_return(weights, data, tickers, total_investment, other_params)
+    return ret - target_return
+
+# Top-level function for portfolio return
+def portfolio_return(weights, data, tickers, total_investment, other_params):
+    weights = np.array(weights)
+    investments = weights * total_investment
+    updated_portfolio = ap.create_portfolio(
+        data, tickers, investments=investments, **other_params
+    )
+    return ap.c_return(updated_portfolio)
+
+# Top-level function for portfolio volatility
+def volatility_objective(weights, data, tickers, total_investment, other_params):
+    weights = np.array(weights)
+    weights /= np.sum(weights)
+    investments = weights * total_investment
+    updated_portfolio = ap.create_portfolio(
+        data, tickers, investments=investments, **other_params
+    )
+    return ap.c_volatility(updated_portfolio)
+
+# Top-level function for negative portfolio return (for maximization)
+def negative_portfolio_return(weights, data, tickers, total_investment, other_params):
+    return -portfolio_return(weights, data, tickers, total_investment, other_params)
+
+# Top-level function for portfolio return scalar (used in minimization)
+def portfolio_return_scalar(weights, data, tickers, total_investment, other_params):
+    return portfolio_return(weights, data, tickers, total_investment, other_params)
+
+# Top-level function for minimizing volatility for a target return
+def minimize_volatility_for_target_return(args):
+    (
+        target_return,
+        data,
+        tickers,
+        total_investment,
+        initial_weights,
+        bounds,
+        method,
+        other_params
+    ) = args
+
+    # Constraints
+    constraints = [
+        {'type': 'eq', 'fun': weight_sum_constraint},
+        {'type': 'eq', 'fun': return_constraint_function,
+         'args': (target_return, data, tickers, total_investment, other_params)}
+    ]
+
+    # Minimize volatility
+    result = minimize(
+        volatility_objective,
+        initial_weights,
+        args=(data, tickers, total_investment, other_params),
+        method=method,
+        bounds=bounds,
+        constraints=constraints
+    )
+    return result
+
+def efficient_frontier(
+    portfolio: dict,
+    num_points: int,
+    multi_thread: bool = False,
+    num_threads: int = 4,
+    method: str = 'SLSQP'
+):
+    """
+    Computes the efficient frontier for the given portfolio and plots it.
+
+    Parameters:
+    - portfolio (dict): Portfolio dictionary created using the `create_portfolio` function.
+    - num_points (int): Number of portfolios to generate along the efficient frontier.
+    - multi_thread (bool): If True, computations are parallelized using multiple threads.
+    - num_threads (int): Number of threads to use if multi_thread is True.
+    - method (str): Optimization method to use (default is 'SLSQP').
+
+    Returns:
+    - dict: A dictionary where keys are integers from 1 to num_points and values are portfolio dictionaries.
+    """
+    # Extract necessary data
+    tickers = portfolio['tickers']
+    initial_investments = portfolio['investments']
+    data = portfolio['untouched_data']
+    market_ticker = portfolio['market_ticker']
+    base_currency = portfolio['base_currency']
+    rebalancing_period_days = portfolio['auto_rebalance']
+    risk_free_rate = portfolio['risk_free_returns']
+    target_weights = portfolio["target_weights"]  
+    return_period_days = portfolio['return_period_days']
+    portfolio_name = portfolio['name']
+
+    total_investment = sum(initial_investments)
+
+    # Initial guess: normalize the initial investments
+    initial_weights = np.array(initial_investments) / total_investment
+
+    num_assets = len(tickers)
+
+    # Bounds for weights: between 0 and 1 (no short selling)
+    bounds = [(0, 1) for _ in range(num_assets)]
+
+    # Constraints: weights sum to 1
+    constraints = [{'type': 'eq', 'fun': weight_sum_constraint}]
+
+    # Prepare 'other_params' to pass to create_portfolio
+    other_params = {
+        'market_ticker': market_ticker,
+        'name_portfolio': portfolio_name,
+        'base_currency': base_currency,
+        'rebalancing_period_days': rebalancing_period_days,
+        'return_period_days': return_period_days,
+        'target_weights': None  # or weights, depending on your library
+    }
+
+    # Compute the range of target returns
+    # First, find the minimum and maximum possible returns
+
+    # Minimize return (minimum return portfolio)
+    min_return_result = minimize(
+        portfolio_return_scalar,
+        initial_weights,
+        args=(data, tickers, total_investment, other_params),
+        method=method,
+        bounds=bounds,
+        constraints=constraints
+    )
+    min_return = portfolio_return(min_return_result.x, data, tickers, total_investment, other_params)
+
+    # Maximize return (maximum return portfolio)
+    max_return_result = minimize(
+        negative_portfolio_return,
+        initial_weights,
+        args=(data, tickers, total_investment, other_params),
+        method=method,
+        bounds=bounds,
+        constraints=constraints
+    )
+    max_return = portfolio_return(max_return_result.x, data, tickers, total_investment, other_params)
+
+    # Generate target returns
+    target_returns = np.linspace(min_return, max_return, num_points)
+
+    # Prepare arguments for optimization
+    args_list = [
+        (
+            tr,
+            data,
+            tickers,
+            total_investment,
+            initial_weights,
+            bounds,
+            method,
+            other_params
+        )
+        for tr in target_returns
+    ]
+
+    # Compute efficient frontier
+    if multi_thread:
+        with multiprocessing.Pool(num_threads) as pool:
+            results = pool.map(minimize_volatility_for_target_return, args_list)
+    else:
+        results = [minimize_volatility_for_target_return(args) for args in args_list]
+
+    # Initialize lists to store portfolio metrics
+    portfolio_returns = []
+    portfolio_volatilities = []
+    portfolio_weights = []
+
+    for result in results:
+        if result.success:
+            weights = result.x
+            investments = weights * total_investment
+            updated_portfolio = ap.create_portfolio(
+                data, tickers, investments=investments, **other_params
+            )
+            ret = ap.c_return(updated_portfolio)
+            vol = ap.c_volatility(updated_portfolio)
+            portfolio_returns.append(ret)
+            portfolio_volatilities.append(vol)
+            portfolio_weights.append(weights)
+        else:
+            # Handle optimization failure
+            print(f"Optimization failed for target return {result.x}")
+            continue
+
+    # Plot the efficient frontier using Plotly
+    fig = go.Figure()
+
+    # Add efficient frontier trace
+    fig.add_trace(go.Scatter(
+        x=portfolio_volatilities,
+        y=portfolio_returns,
+        mode='lines',
+        name='Efficient Frontier'
+    ))
+
+    # Add minimum variance portfolio
+    min_vol_index = np.argmin(portfolio_volatilities)
+    fig.add_trace(go.Scatter(
+        x=[portfolio_volatilities[min_vol_index]],
+        y=[portfolio_returns[min_vol_index]],
+        mode='markers',
+        name='Minimum Variance Portfolio',
+        marker=dict(color='red', size=10)
+    ))
+
+    # Add maximum return portfolio
+    max_ret_index = np.argmax(portfolio_returns)
+    fig.add_trace(go.Scatter(
+        x=[portfolio_volatilities[max_ret_index]],
+        y=[portfolio_returns[max_ret_index]],
+        mode='markers',
+        name='Maximum Return Portfolio',
+        marker=dict(color='green', size=10)
+    ))
+
+    fig.update_layout(
+        title='Efficient Frontier',
+        xaxis_title='Volatility',
+        yaxis_title='Return',
+        showlegend=True
+    )
+
+    fig.show()
+
+    # Create the dictionary of portfolios
+    portfolios_dict = {}
+
+    for i, weights in enumerate(portfolio_weights):
+        investments = weights * total_investment
+        # Create portfolio using 'create_portfolio'
+        new_portfolio = ap.create_portfolio(
+            data, tickers, investments=investments, **other_params
+        )
+        portfolios_dict[i+1] = new_portfolio
+
+    # Return the dictionary of portfolios
+    return portfolios_dict
+   

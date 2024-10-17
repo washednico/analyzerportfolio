@@ -1,5 +1,6 @@
 from analyzerportfolio.optimization import (
-optimize
+optimize,
+efficient_frontier
     )
 
 from analyzerportfolio.utils import (
@@ -55,23 +56,27 @@ if True:
         ticker = ["CSPX.L", "IWDA.L","EIMI.L","IEAC.L","IMAE.AS","EQQQ.MI",
                   "XZMU.L","1674.T","SLVR.DE","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
                   "IMEU.AS", "XDEW.MI", "QDVE.DE", "DGRW", "ITA", "FNDX", "FDVV", "MLPX",
-                  "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L","SLV","DYNF"]
+                  "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L",
+                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI"]
         
         
         for i in ticker:
             investments.append(100000)
 
         start_date = '2020-08-27'
-        end_date = '2024-08-28'
+        end_date = '2024-10-07'
         market_ticker = 'benchmark'
         base_currency = 'USD'
         risk_free = "PCREDIT8"
+        colors = ["orange"]
         
         
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
         portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
+        result = efficient_frontier(portfolio_1,num_points=15, multi_thread=True, num_threads=20)
         
+
 
         information_ratio1 = c_info_ratio(portfolio_1)
         
@@ -83,10 +88,11 @@ if True:
         print("Sharpe ratio after ", c_sharpe(portfolio_optimized))
         print(read_portfolio_composition(portfolio_optimized,min_value = 0.001))
 
-        garch(portfolio_optimized, plot_difference=True)
-        portfolio_value(portfolio_optimized)
+        garch(portfolio_optimized, plot_difference=True, colors=colors)
+        portfolio_value(portfolio_optimized, colors=colors)
 
-        garch_diff(portfolio_optimized)
+        garch_diff(portfolio_optimized, colors=colors)
+        
 
 
 

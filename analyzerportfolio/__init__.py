@@ -7,6 +7,7 @@ from .utils import create_portfolio
 from .utils import read_portfolio_composition
 
 from .metrics import c_total_return
+from .metrics import c_return
 from .metrics import c_volatility
 from .metrics import c_beta
 from .metrics import c_sharpe
