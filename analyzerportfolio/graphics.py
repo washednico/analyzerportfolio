@@ -457,7 +457,7 @@ def heatmap(
         colors: Union[str, List[str]] = None,
         plot: bool = True,
         disassemble: bool = False
- )-> pd.DataFrame:
+ )-> None:
     """
     Plot a heatmap for correlation analysis between portfolios. The user can choose to either show correlations
     between the overall portfolio returns or break down the portfolios into individual assets.
@@ -576,6 +576,78 @@ def heatmap(
         # Possibility to return correlation matrix for further calculations 
         #return corr_matrix
 
+def pie_chart(
+        portfolios: Union[dict, List[dict]], 
+        colors: Union[str, List[str]] = None, 
+        plot: bool = True,
+        threshold: float = 0.001):
+    """
+    Plot a pie chart showing the asset allocation of an ETF-based investment strategy for one or multiple portfolios using Plotly.
+    Small allocations (less than the threshold) are grouped into an "All Others" category.
+    
+    Parameters:
+    - portfolios (Union[dict, List[dict]]): A dictionary or a list of portfolio dictionaries, each representing a portfolio.
+
+    - colors (Union[str, List[str]], optional): A string representing a single color or a list of colors for the portfolio segments.
+      If not provided, default colors will be used.
+
+    - plot (bool, optional): Whether to plot the pie chart using Plotly (default is True).
+    
+    - threshold (float, optional): The allocation threshold below which allocations are grouped into "All Others" (default is 0.001).
+
+    Returns:
+    - None. The pie chart will be displayed if plot is set to True.
+    """
+
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    # Ensure colors is a list
+    if colors is None:
+        colors = [None] * len(portfolios)
+    elif isinstance(colors, str):
+        colors = [colors]
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        raise ValueError("Invalid type for 'colors' parameter.")
+    
+    # Check if at least one portfolio is passed
+    if len(portfolios) > 0:
+
+        for portfolio, color in zip(portfolios, colors):
+            name = portfolio['name']
+            tickers = portfolio['tickers']
+            weights = portfolio['weights']
+
+            # Create a dictionary of tickers and their corresponding weights
+            allocations = dict(zip(tickers, weights))
+
+            # Separate small allocations into "All Others"
+            large_allocations = {k: v for k, v in allocations.items() if v >= threshold}
+            small_allocations_total = sum(v for v in allocations.values() if v < threshold)
+            
+            # Create "All Others" if there are small allocations
+            if small_allocations_total > 0:
+                large_allocations["All Others"] = round(small_allocations_total, 8)
+            
+            # Extract asset names and their respective sizes
+            labels = list(large_allocations.keys())
+            sizes = list(large_allocations.values())
+            
+            # Show the pie chart if plot is True
+            if plot:
+                fig = go.Figure(data=[go.Pie(labels=labels, values=sizes, hole=.3, marker=dict(colors=color))])
+                
+                fig.update_layout(
+                    title_text=f"{name} - Portfolio Asset Allocation",
+                    annotations=[dict(text=name, x=0.5, y=0.5, font_size=20, showarrow=False)]
+                )
+
+                fig.show()
+
 def distribution_return(
     portfolios: Union[str, List[str]],
     bins: int = 100,
@@ -666,7 +738,6 @@ def distribution_return(
     )
 
     fig.show()
-
 
 def simulate_dca(
     portfolios: Union[dict, List[dict]],
