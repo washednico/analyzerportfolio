@@ -8,7 +8,8 @@ from analyzerportfolio.metrics import (
     c_VaR,
     c_total_return,
     c_volatility,
-    c_max_drawdown
+    c_max_drawdown,
+    c_ES
     )
 
 from analyzerportfolio.utils import (
@@ -42,8 +43,11 @@ if False:
         var_99_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30)
         var_95_p = c_VaR(portfolio_1, confidence_level=0.95, method="parametric")
         var_99_p_30d = c_VaR(portfolio_1, confidence_level=0.95, horizon_days=30, method="parametric")
+        es_95 = c_ES(portfolio_1, confidence_level=0.95)
+        es_95_30d = c_ES(portfolio_1, confidence_level=0.95, horizon_days=30)
+        es_95_p = c_ES(portfolio_1, confidence_level=0.95, method='parametric')
+        es_95_p_30d = c_ES(portfolio_1, confidence_level=0.95, method='parametric', horizon_days=30)
         max_drawdown = c_max_drawdown(portfolio_1)
-
 
         print(beta, alpha)
         print(return_port)
@@ -56,6 +60,10 @@ if False:
         print(var_95)
         print(var_99_30d)
         print(var_95_p)
+        print(es_95)
+        print(es_95_30d)
+        print(es_95_p)
+        print(es_95_p_30d)
         print(var_99_p_30d)
         print(max_drawdown)
 

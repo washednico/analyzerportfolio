@@ -480,6 +480,59 @@ def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1
 
     return abs(VaR_annualized)
 
+def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None) -> float:
+    """
+    Calculate the Expected Shortfall (ES), also known as Conditional VaR (CVaR), of a portfolio using the historical or parametric method.
+
+    Parameters:
+    - portfolio (dict): Dictionary created from the create_portfolio function.
+    - confidence_level (float, optional): The confidence level for the ES calculation. Defaults to 0.95 (95% confidence).
+    - horizon_days (int, optional): The number of days ahead for the ES calculation. Defaults to 1 day.
+    - method (str, optional): The method used to calculate ES. Options: 'historical' or 'parametric'. Defaults to 'historical'.
+    - portfolio_value (int, optional): The value of the portfolio. If not provided, the ES will be calculated based on the last portfolio value.
+
+    Returns:
+    - float: The Expected Shortfall (ES) of the portfolio at the specified confidence level and time horizon.
+    """
+    return_days = portfolio['return_period_days']
+
+    if portfolio_value is None:
+        # Extract the last portfolio value from the portfolio dictionary
+        portfolio_value = portfolio['portfolio_value'].iloc[-1]
+
+    # Extract portfolio returns from the portfolio dictionary
+    portfolio_returns = portfolio['portfolio_returns']
+
+    if method == "historical":
+        # Calculate VaR using the historical method
+        VaR = portfolio_returns.quantile(1 - confidence_level)
+        
+        # Calculate Expected Shortfall (ES) as the average of losses beyond VaR
+        ES = portfolio_returns[portfolio_returns <= VaR].mean()
+    
+    elif method == "parametric":
+        # Calculate the mean and standard deviation of the portfolio returns
+        mean_return = portfolio_returns.mean()
+        std_dev = portfolio_returns.std()
+
+        # Calculate the z-score for the specified confidence level
+        z_score = norm.ppf(confidence_level)
+
+        # Calculate the VaR using the parametric method
+        VaR = - (mean_return - z_score * std_dev)
+
+        # Calculate Expected Shortfall (ES) using the parametric method
+        # ES = mean - std_dev * (PDF of z-score) / (1 - confidence level)
+        pdf_z = norm.pdf(z_score)
+        ES = - (mean_return - (std_dev * (pdf_z / (1 - confidence_level))))
+    else:
+        raise ValueError("Invalid method. Choose 'historical' or 'parametric'.")
+
+    # Annualize the Expected Shortfall for the specified time horizon
+    ES_annualized = ES * np.sqrt(horizon_days / return_days) * portfolio_value
+
+    return abs(ES_annualized)
+
 def c_max_drawdown(portfolio: dict) -> float:
     """
     Calculate the maximum drawdown of a portfolio.
