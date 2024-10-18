@@ -21,10 +21,10 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 optimization 
 
 ## Working in progress
-Heatmap between portfolios  
+~Heatmap between portfolios~
 Kelly criterion  
 Fractals model  
-Expected Shortfall  
+~Expected Shortfall~  
 Different types of VaR    
 
 ## To Push once everything is finished
