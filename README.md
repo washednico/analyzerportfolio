@@ -22,9 +22,9 @@ optimization
 
 ## Working in progress
 ~Heatmap between portfolios~
-Kelly criterion  
-Fractals model  
 ~Expected Shortfall~  
+Kelly criterion  
+Fractals model   
 Different types of VaR    
 
 ## To Push once everything is finished
