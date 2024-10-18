@@ -274,6 +274,30 @@ def montecarlo(
     num_simulations: int = 100,
     plot: bool = True
 ) -> Dict[str, pd.DataFrame]:
+    """
+    Perform Monte Carlo simulations on one or multiple portfolios to simulate future portfolio values and optionally simulate market values.
+
+    Parameters:
+    - portfolios (Union[dict, List[dict]]): A dictionary or list of dictionaries, each representing a portfolio. Each dictionary should contain:
+    - 'name' (str): The name of the portfolio.
+    - 'investments' (list[float]): List of the amounts invested in each asset of the portfolio.
+    - 'portfolio_returns' (pd.Series): Historical returns of the portfolio.
+    - Optionally, the first portfolio can also include:
+        - 'market_returns' (pd.Series): Historical market returns for comparison.
+        - 'market_ticker' (str): Ticker or name for the market (default is 'Market').
+        - 'return_period_days' (int): The number of days in each return period.
+
+    - simulation_length (int): The number of periods to simulate (e.g., number of days or months).
+    - num_simulations (int, optional): Number of Monte Carlo simulations to run for each portfolio (default is 100).
+    - plot (bool, optional): Whether to plot the simulation results using subplots for each portfolio and the market (default is True).
+
+    Returns:
+    - Dict[str, pd.DataFrame]: A dictionary where the keys are the portfolio names (or 'market') and the values are DataFrames 
+    with the simulated portfolio values for each simulation.
+
+    Raises:
+    - ValueError: If no portfolios are provided.
+    """
     if isinstance(portfolios, dict):
         portfolios = [portfolios]
 
@@ -338,21 +362,32 @@ def montecarlo(
 
     return simulation_results
 
-
-def drawdown(portfolios: Union[str, List[str]],
-             plot: bool = True, 
-             colors: Union[str, List[str]] = None,
-            market_color: str = 'green',) -> pd.DataFrame:
+def drawdown(
+            portfolios: Union[str, List[str]],
+            plot: bool = True, 
+            colors: Union[str, List[str]] = None,
+            market_color: str = 'green'
+) -> pd.DataFrame:
     """
-    Plot drawdown of multiple portfolios using their portfolio values and optionally plot market drawdown.
+    Plot and compare the drawdowns of multiple portfolios, optionally including a market drawdown for comparison.
 
     Parameters:
-    - portfolios (list[dict]): List of portfolio dictionaries containing 'name' and 'portfolio_value'.
-      Optionally, the first portfolio can contain 'market_value' for market drawdown comparison.
-    - plot (bool): Whether to plot the results (default is True).
+    - portfolios (Union[str, List[str]]): A list of portfolio dictionaries where each dictionary contains:
+    - 'name' (str): The name of the portfolio.
+    - 'portfolio_value' (pd.Series): The series of portfolio values over time.
+    Optionally, the first portfolio can include:
+    - 'market_value' (pd.Series): The market value series for drawdown comparison.
+    
+    - plot (bool, optional): Whether to plot the drawdown comparisons (default is True).
+    - colors (Union[str, List[str]], optional): The colors to use for the portfolio drawdowns. Can be a string (single color for all portfolios) 
+    or a list of colors, one for each portfolio. If not provided, default colors are used.
+    - market_color (str, optional): The color to use for the market drawdown (default is 'green').
 
     Returns:
-    - pd.DataFrame: DataFrame containing the drawdown series for each portfolio and optionally for the market.
+    - pd.DataFrame: A DataFrame containing the drawdown series for each portfolio and the market.
+
+    Raises:
+    - ValueError: If no portfolios are provided or if the length of the colors list doesn't match the number of portfolios.
     """
     if isinstance(portfolios, dict):
         portfolios = [portfolios]
@@ -418,49 +453,128 @@ def drawdown(portfolios: Union[str, List[str]],
     return pd.DataFrame(drawdown_data)
 
 def heatmap(
-        portfolio: dict,
-        plot: bool = True
-        ):
+        portfolios: Union[dict, List[dict]],
+        colors: Union[str, List[str]] = None,
+        plot: bool = True,
+        disassemble: bool = False
+ )-> pd.DataFrame:
     """
-    Plot a heatmap for correaltion analysis
+    Plot a heatmap for correlation analysis between portfolios. The user can choose to either show correlations
+    between the overall portfolio returns or break down the portfolios into individual assets.
 
-    Parameters: 
-    portfolio (dict): Portfolio dictionary created from the create_portfolio function.
-    plot (bool): Whether to plot the results (default is True).
+    Parameters:
+    - portfolios (Union[dict, List[dict]]): A dictionary or a list of portfolio dictionaries, each representing a portfolio.
+      Each dictionary should contain:
+      - 'name' (str): The name of the portfolio.
+      - If `disassemble` is True:
+        - 'tickers' (list[str]): A list of asset tickers included in the portfolio.
+        - 'returns' (pd.DataFrame): A DataFrame with portfolio returns for each asset.
+      - If `disassemble` is False:
+        - 'portfolio_returns' (pd.Series): A series of overall portfolio returns over time.
+      Optionally, the first portfolio may contain:
+      - 'market_returns' (pd.Series): Market return series for correlation analysis.
+      - 'market_ticker' (str): Name of the market index (default is 'Market').
+
+    - colors (Union[str, List[str]], optional): A string representing a single color or a list of colors matching the number of portfolios.
+      If not provided, default colors will be used.
+
+    - plot (bool, optional): Whether to plot the heatmap using Plotly (default is True).
+
+    - disassemble (bool, optional): Whether to break down portfolios into their individual components (True) or 
+      use overall portfolio returns (False, default).
 
     Returns:
-    pd.DataFrame: A DataFrame with the correlation coefficients. 
+    - pd.DataFrame: A DataFrame with the correlation coefficients between the returns of the portfolios and, optionally, the market.
+
+    Raises:
+    - ValueError: If no portfolios are provided or if the length of the 'colors' list doesn't match the number of portfolios.
     """
     
-    tickers = portfolio['tickers']
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    # Ensure colors is a list
+    if colors is None:
+        colors = [None] * len(portfolios)
+    elif isinstance(colors, str):
+        colors = [colors]
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        raise ValueError("Invalid type for 'colors' parameter.")
     
-    revised_tickers = []
-    for i in tickers:
-        revised_tickers.append(i+"_Return")
-    
-    returns_df = portfolio['returns']
-    market_ticker = portfolio['market_ticker']
+    # Check if portfolios are passed
+    if len(portfolios) > 0:
 
-    # Retrieving returns
-    stock_returns = returns_df[revised_tickers]
-    market_returns = portfolio['market_returns']
-    stock_returns = stock_returns.copy()
-    stock_returns.rename(columns=lambda x: x.replace("_Return",""), inplace=True)
-    
-    # Combine stock and market returns into a single DataFrame
-    combined_returns = pd.concat([stock_returns, market_returns], axis=1)
+        # Prepare a dict to store return data from all portfolios
+        all_returns = {}
 
-    # Calculate the correlation matrix
-    corr_matrix = combined_returns.corr()
+        # Extract market returns from the first portfolio if available
+        market_returns = portfolios[0].get('market_returns', None)
+        market_name = portfolios[0].get('market_ticker', 'Market')
 
-    if plot:
-        # Plot the clustermap using px 
-        fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
-        fig.update_layout(title_text="Heatmap of Stocks and Market")
-        fig.show()
+        if market_returns is not None:
+            # Clean market_returns
+            market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna()
 
-    return corr_matrix
+            # Ensure market_returns is a Pandas Series
+            if isinstance(market_returns, pd.DataFrame):
+                market_returns = market_returns.squeeze()
 
+            # Sort the index to ensure proper alignment
+            market_returns = market_returns.sort_index()
+
+            # Add market returns to the all_returns dictionary
+            all_returns[market_name] = market_returns
+
+        if disassemble:
+            # Disassemble portfolios into individual asset returns
+            for portfolio in portfolios:
+                tickers = portfolio['tickers']
+                revised_tickers = [ticker + "_Return" for ticker in tickers]
+                
+                # Extract asset returns
+                portfolio_returns = portfolio['returns'][revised_tickers].copy()
+                portfolio_returns.rename(columns=lambda x: x.replace("_Return", ""), inplace=True)
+                all_returns.update(portfolio_returns.to_dict(orient='series'))
+
+        else:
+            # Use overall portfolio returns
+            for portfolio in portfolios:
+                name = portfolio['name']
+                portfolio_returns = portfolio['portfolio_returns']
+
+                # Clean portfolio_returns
+                portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
+
+                # Ensure portfolio_returns is a Pandas Series
+                if isinstance(portfolio_returns, pd.DataFrame):
+                    portfolio_returns = portfolio_returns.squeeze()
+
+                # Sort the index to ensure proper alignment
+                portfolio_returns = portfolio_returns.sort_index()
+
+                # Add the portfolio returns to the all_returns dictionary
+                all_returns[name] = portfolio_returns
+
+        # Create a DataFrame from all the returns
+        combined_returns = pd.DataFrame(all_returns)
+
+        # Calculate the correlation matrix
+        corr_matrix = combined_returns.corr()
+
+        # Plot the heatmap if plot is True
+        if plot:
+            fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
+            fig.update_layout(
+                title_text="Heatmap of Portfolio Correlations" if not disassemble else "Heatmap of Asset Correlations"
+            )
+            fig.show()
+
+        # Possibility to return correlation matrix for further calculations 
+        #return corr_matrix
 
 def distribution_return(
     portfolios: Union[str, List[str]],
