@@ -28,7 +28,9 @@ from .graphics import distribution_return
 from .graphics import simulate_dca
 from .graphics import probability_cone
 from .graphics import garch_diff
+from .graphics import pie_chart
 
 from .ai import monitor_news
 
 from .optimization import optimize
+from .optimization import efficient_frontier

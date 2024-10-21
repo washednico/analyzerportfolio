@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing
 import pandas as pd
+from typing import Union, List, Dict
 
 
 
@@ -298,7 +299,9 @@ def efficient_frontier(
     num_points: int,
     multi_thread: bool = False,
     num_threads: int = 4,
-    method: str = 'SLSQP'
+    method: str = 'SLSQP',
+    additional_portfolios: Union[str, List[str]] = None,
+    colors: Union[str, List[str]] = None,
 ):
     """
     Computes the efficient frontier for the given portfolio and plots it.
@@ -313,6 +316,23 @@ def efficient_frontier(
     Returns:
     - dict: A dictionary where keys are integers from 1 to num_points and values are portfolio dictionaries.
     """
+
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    # Ensure colors is a list
+    if colors is None:
+        colors = [None] * len(portfolios)
+    elif isinstance(colors, str):
+        colors = [colors]
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        raise ValueError("Invalid type for 'colors' parameter.")
+    
+
     # Extract necessary data
     tickers = portfolio['tickers']
     initial_investments = portfolio['investments']
@@ -457,6 +477,18 @@ def efficient_frontier(
         yaxis_title='Return',
         showlegend=True
     )
+
+    if additional_portfolios is not None:
+        for port, color in zip(additional_portfolios, colors):
+            port_vol = ap.c_volatility(port)
+            port_ret = ap.c_return(port)
+            fig.add_trace(go.Scatter(
+                x=[port_vol],
+                y=[port_ret],
+                mode='markers',
+                name=port["name"],
+                marker=dict(color=color, size=10)
+            ))
 
     fig.show()
 
