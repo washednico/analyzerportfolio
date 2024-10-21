@@ -6,7 +6,8 @@ efficient_frontier
 from analyzerportfolio.utils import (
     download_data,
     create_portfolio,
-    read_portfolio_composition
+    read_portfolio_composition,
+    remove_small_weights
 )
 
 from analyzerportfolio.metrics import (
@@ -27,7 +28,8 @@ from analyzerportfolio.graphics import (
     garch,
     garch_diff,
     montecarlo,
-    pie_chart
+    pie_chart,
+    heatmap
 )
 
 import os
@@ -64,7 +66,7 @@ if True:
         
         for i in ticker:
             investments.append(100000)
-
+        
         start_date = '2020-08-27'
         end_date = '2024-10-07'
         market_ticker = 'benchmark'
@@ -74,8 +76,7 @@ if True:
         
         
         
-        data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
-        
+        data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/leonardo/Desktop/cache/etf")
         portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
         
         
@@ -85,6 +86,7 @@ if True:
         
 
         portfolio_optimized = optimize(portfolio_1, metric='information_ratio')
+        portfolio_optimized = remove_small_weights(portfolio_optimized)
         portfolio_optimized["name"] = "Optimized Portfolio Information Ratio"
         portfolio_optimized_sharpe = optimize(portfolio_1, metric='sharpe')
         portfolio_optimized_sharpe["name"] = "Optimized Portfolio Sharpe Ratio"
@@ -100,8 +102,9 @@ if True:
         montecarlo([portfolio_optimized,portfolio_optimized_sharpe], simulation_length=30)
 
         garch_diff([portfolio_optimized,portfolio_optimized_sharpe], colors = ["orange","blue"])
-
-        if True:
+        
+        heatmap(portfolio_optimized, disassemble=True)
+        if False:
             result = efficient_frontier(portfolio_1,num_points=20, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe], colors=["orange","blue"])
         
         pie_chart(portfolio_optimized)
