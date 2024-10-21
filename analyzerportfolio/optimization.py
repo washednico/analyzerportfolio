@@ -304,19 +304,9 @@ def efficient_frontier(
     colors: Union[str, List[str]] = None,
 ):
     """
-    Computes the efficient frontier for the given portfolio and plots it.
-
-    Parameters:
-    - portfolio (dict): Portfolio dictionary created using the `create_portfolio` function.
-    - num_points (int): Number of portfolios to generate along the efficient frontier.
-    - multi_thread (bool): If True, computations are parallelized using multiple threads.
-    - num_threads (int): Number of threads to use if multi_thread is True.
-    - method (str): Optimization method to use (default is 'SLSQP').
-
-    Returns:
-    - dict: A dictionary where keys are integers from 1 to num_points and values are portfolio dictionaries.
+    Computes the efficient frontier for the given portfolio and plots only the upper part of the efficient frontier (above the minimum variance portfolio).
     """
-
+    
     # Ensure portfolios is a list
     if isinstance(additional_portfolios, dict):
         additional_portfolios = [additional_portfolios]
@@ -332,7 +322,6 @@ def efficient_frontier(
     else:
         raise ValueError("Invalid type for 'colors' parameter.")
     
-
     # Extract necessary data
     tickers = portfolio['tickers']
     initial_investments = portfolio['investments']
@@ -368,11 +357,8 @@ def efficient_frontier(
         'target_weights': None  # or weights, depending on your library
     }
 
-    # Compute the range of target returns
-    # First, find the minimum and maximum possible returns
-
-    # Minimize return (minimum return portfolio)
-    min_return_result = minimize(
+    # Compute the Minimum Variance Portfolio (MVP)
+    min_var_result = minimize(
         portfolio_return_scalar,
         initial_weights,
         args=(data, tickers, total_investment, other_params),
@@ -380,9 +366,9 @@ def efficient_frontier(
         bounds=bounds,
         constraints=constraints
     )
-    min_return = portfolio_return(min_return_result.x, data, tickers, total_investment, other_params)
+    min_var_return = portfolio_return(min_var_result.x, data, tickers, total_investment, other_params)
 
-    # Maximize return (maximum return portfolio)
+    # Compute the Maximum Return Portfolio (MRP)
     max_return_result = minimize(
         negative_portfolio_return,
         initial_weights,
@@ -393,8 +379,8 @@ def efficient_frontier(
     )
     max_return = portfolio_return(max_return_result.x, data, tickers, total_investment, other_params)
 
-    # Generate target returns
-    target_returns = np.linspace(min_return, max_return, num_points)
+    # Generate target returns above the minimum variance portfolio (exclude lower part)
+    target_returns = np.linspace(min_var_return, max_return, num_points)
 
     # Prepare arguments for optimization
     args_list = [
@@ -411,7 +397,7 @@ def efficient_frontier(
         for tr in target_returns
     ]
 
-    # Compute efficient frontier
+    # Compute efficient frontier only for the upper part
     if multi_thread:
         with multiprocessing.Pool(num_threads) as pool:
             results = pool.map(minimize_volatility_for_target_return, args_list)
@@ -440,7 +426,7 @@ def efficient_frontier(
             print(f"Optimization failed for target return {result.x}")
             continue
 
-    # Plot the efficient frontier using Plotly
+    # Plot the efficient frontier using Plotly (only upper part)
     fig = go.Figure()
 
     # Add efficient frontier trace
@@ -472,7 +458,7 @@ def efficient_frontier(
     ))
 
     fig.update_layout(
-        title='Efficient Frontier',
+        title='Efficient Frontier (Upper Part Only)',
         xaxis_title='Volatility',
         yaxis_title='Return',
         showlegend=True

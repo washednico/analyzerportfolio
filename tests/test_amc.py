@@ -61,7 +61,11 @@ if True:
                   "XZMU.L","1674.T","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
                   "IMEU.AS", "XDEW.MI", "QDVE.DE", "DGRW", "ITA", "FNDX", "FDVV", "MLPX",
                   "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L",
+<<<<<<< Updated upstream
                   "SLV","DYNF","IBC1.MU","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI"]
+=======
+                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI","IDMO","LVHI","DXJ","ARGT"]
+>>>>>>> Stashed changes
         
         
         for i in ticker:
@@ -101,12 +105,19 @@ if True:
         montecarlo([portfolio_optimized,portfolio_optimized_sharpe], simulation_length=30)
 
         garch_diff([portfolio_optimized,portfolio_optimized_sharpe], colors = ["orange","blue"])
+<<<<<<< Updated upstream
         
         heatmap(portfolio_optimized, disassemble=True)
         if False:
             result = efficient_frontier(portfolio_1,num_points=20, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe], colors=["orange","blue"])
+=======
+
+        if False:
+            result = efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe], colors=["orange","blue"])
+>>>>>>> Stashed changes
         
         pie_chart(portfolio_optimized)
+        pie_chart(portfolio_optimized_sharpe)
 
 
 
