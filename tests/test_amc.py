@@ -61,11 +61,7 @@ if True:
                   "XZMU.L","1674.T","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
                   "IMEU.AS", "XDEW.MI", "QDVE.DE", "DGRW", "ITA", "FNDX", "FDVV", "MLPX",
                   "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L",
-<<<<<<< Updated upstream
-                  "SLV","DYNF","IBC1.MU","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI"]
-=======
-                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI","IDMO","LVHI","DXJ","ARGT"]
->>>>>>> Stashed changes
+                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI","IDMO","LVHI","DXJ","ARGT","EPU","FLCA"]
         
         
         for i in ticker:
@@ -79,7 +75,7 @@ if True:
         colors = ["orange"]
         
         
-        data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/leonardo/Desktop/cache/etf")
+        data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
         portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
         
         
@@ -105,16 +101,12 @@ if True:
         montecarlo([portfolio_optimized,portfolio_optimized_sharpe], simulation_length=30)
 
         garch_diff([portfolio_optimized,portfolio_optimized_sharpe], colors = ["orange","blue"])
-<<<<<<< Updated upstream
         
         heatmap(portfolio_optimized, disassemble=True)
-        if False:
-            result = efficient_frontier(portfolio_1,num_points=20, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe], colors=["orange","blue"])
-=======
+        
 
         if False:
             result = efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe], colors=["orange","blue"])
->>>>>>> Stashed changes
         
         pie_chart(portfolio_optimized)
         pie_chart(portfolio_optimized_sharpe)
