@@ -325,7 +325,38 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
 
         
         
+def remove_small_weights(portfolio_returns:dict, threshold:float=0.0005) -> dict:
+    """
+    Removes assets with weights below a specified threshold while maintaining the original structure of the portfolio data.
 
+    Parameters:
+    - portfolio_returns (dict): Dictionary containing portfolio data, including tickers, investments, and weights.
+    - threshold (float): Optional float representing the minimum acceptable weight for assets to remain in the portfolio. Default is 0.001.
+
+    Returns:
+    - portfolio_returns(dict): Updated portfolio dictionary with assets that meet the weight threshold. 
+                        The 'tickers', 'investments', and 'weights' fields are filtered accordingly.
+    """
+    # Extract the relevant data
+    tickers = portfolio_returns["tickers"]
+    investments = portfolio_returns["investments"]
+    weights = portfolio_returns["weights"]
+    
+    # Filter assets based on the weight threshold
+    filtered_data = [(ticker, investment, weight) for ticker, investment, weight in zip(tickers, investments, weights) if weight >= threshold]
+    
+    # Unzip the filtered data back into separate lists
+    if filtered_data:
+        tickers, investments, weights = zip(*filtered_data)
+    else:
+        tickers, investments, weights = [], [], []
+
+    # Update the portfolio dictionary
+    portfolio_returns["tickers"] = list(tickers)
+    portfolio_returns["investments"] = list(investments)
+    portfolio_returns["weights"] = list(weights)
+
+    return portfolio_returns
 
 def create_portfolio(
     data: pd.DataFrame,

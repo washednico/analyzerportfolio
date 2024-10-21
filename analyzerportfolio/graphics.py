@@ -642,8 +642,7 @@ def pie_chart(
                 fig = go.Figure(data=[go.Pie(labels=labels, values=sizes, hole=.3, marker=dict(colors=color))])
                 
                 fig.update_layout(
-                    title_text=f"{name} - Portfolio Asset Allocation",
-                    annotations=[dict(text=name, x=0.5, y=0.5, font_size=20, showarrow=False)]
+                    title_text=f"{name} - Portfolio Asset Allocation"
                 )
 
                 fig.show()
