@@ -7,7 +7,8 @@ from analyzerportfolio.utils import (
     download_data,
     create_portfolio,
     read_portfolio_composition,
-    remove_small_weights
+    remove_small_weights,
+    update_portfolio
 )
 
 from analyzerportfolio.metrics import (
@@ -29,10 +30,12 @@ from analyzerportfolio.graphics import (
     garch_diff,
     montecarlo,
     pie_chart,
-    heatmap
+    heatmap,
+    distribution_return,
+    drawdown
 )
 
-import os
+
 import pandas as pd
 
 
@@ -42,26 +45,12 @@ if True:
         ticker = []
         investments = []
 
-        if False:
-            list_etf = pd.read_csv(r"/Users/nicolafochi/Desktop/cache/etf/etf_info_sort.csv", sep=";")
-
-            for index, row in list_etf.iterrows():
-                
-                    ticker.append(row["Ticker\n"].split(" ")[0])
-                    investments.append(100000)
-
-                    if len(ticker) == 80:
-                        break
-            
-            for etf in ["CSSPX.MI", "EIMI.SW", "SGLD.MI","IBC1.MU"]:
-                ticker.append(etf)
-                investments.append(100000)
-
         ticker = ["CSPX.L", "IWDA.L","EIMI.L","IEAC.L", "EQQQ.MI",
                   "XZMU.L","1674.T","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
                   "IMEU.AS", "XDEW.MI", "QDVE.DE", "DGRW", "ITA", "FNDX", "FDVV", "MLPX",
                   "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L",
-                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI","IDMO","LVHI","DXJ","ARGT","EPU","FLCA"]
+                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE",
+                  "XMEU.MI","IDMO","LVHI","DXJ","ARGT","EPU","FLCA","DBEU"]
         
         
         for i in ticker:
@@ -72,44 +61,54 @@ if True:
         market_ticker = 'benchmark'
         base_currency = 'USD'
         risk_free = "PCREDIT8"
-        colors = ["orange"]
+        colors= ["orange","blue","red"]
         
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
-        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
+        portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Equally Weighted", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
         
         
-
-
-        information_ratio1 = c_info_ratio(portfolio_1)
+        print("Information ratio before optimization", c_info_ratio(portfolio_1))
+        print("Sharpe ratio after before optimization ", c_sharpe(portfolio_1))
         
 
         portfolio_optimized = optimize(portfolio_1, metric='information_ratio')
         portfolio_optimized = remove_small_weights(portfolio_optimized)
-        portfolio_optimized["name"] = "Optimized Portfolio Information Ratio"
+        portfolio_optimized["name"] = "Optimized Portfolio Information"
+
+        print("Information ratio after information optimization",c_info_ratio(portfolio_optimized))
+        print("Sharpe ratio after after information optimization ", c_sharpe(portfolio_1))
+
+
         portfolio_optimized_sharpe = optimize(portfolio_1, metric='sharpe')
-        portfolio_optimized_sharpe["name"] = "Optimized Portfolio Sharpe Ratio"
-        information_ratio_optimized = c_info_ratio(portfolio_optimized)
-        print("Information ratio before ", information_ratio1)
-        print("Information ratio after ",information_ratio_optimized)
-        print("Sharpe ratio after ", c_sharpe(portfolio_optimized))
-        print(read_portfolio_composition(portfolio_optimized,min_value = 0.001))
-        
-        garch([portfolio_optimized,portfolio_optimized_sharpe], plot_difference=True, colors = ["orange","blue"])
-        portfolio_value([portfolio_optimized,portfolio_optimized_sharpe],colors = ["orange","blue"])
+        portfolio_optimized = remove_small_weights(portfolio_optimized)
+        portfolio_optimized_sharpe["name"] = "Optimized Portfolio Sharpe"
 
-        montecarlo([portfolio_optimized,portfolio_optimized_sharpe], simulation_length=30)
+        print("Information ratio after sharp optimization",c_info_ratio(portfolio_optimized_sharpe))
+        print("Sharpe ratio after sharpe optimization ", c_sharpe(portfolio_optimized))
 
-        garch_diff([portfolio_optimized,portfolio_optimized_sharpe], colors = ["orange","blue"])
-        
-        heatmap(portfolio_optimized, disassemble=True)
-        
-
-        if False:
-            result = efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe], colors=["orange","blue"])
-        
         pie_chart(portfolio_optimized)
         pie_chart(portfolio_optimized_sharpe)
+        pie_chart(portfolio_1)
+        
+        garch([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], plot_difference=True, colors = colors)
+        
+        portfolio_value([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1],colors = colors)
+
+        montecarlo([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], simulation_length=30)
+
+        garch_diff([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors = colors)
+        
+        heatmap(portfolio_optimized, disassemble=True)
+
+        distribution_return([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors = colors)
+
+        drawdown([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors = colors)
+
+        if True:
+            result = efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors=colors)
+        
+        
 
 
 

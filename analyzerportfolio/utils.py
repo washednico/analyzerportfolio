@@ -356,7 +356,9 @@ def remove_small_weights(portfolio_returns:dict, threshold:float=0.0005) -> dict
     portfolio_returns["investments"] = list(investments)
     portfolio_returns["weights"] = list(weights)
 
-    return portfolio_returns
+    new_portfolio = update_portfolio(portfolio_returns)
+
+    return new_portfolio
 
 def create_portfolio(
     data: pd.DataFrame,
@@ -596,9 +598,11 @@ def create_portfolio(
         "portfolio_value" : returns_df["Portfolio_Value"],
         "risk_free_returns" : returns_df["Risk_Free_Return"],
         "untouched_data" : data,
-        "target_weights" : initial_target
-    }
+        "target_weights" : initial_target,
+        "exclude_ticker_time" : exclude_ticker_time,
+        "exclude_ticker" : exclude_ticker
 
+    }
     
     return portfolio_returns
 
@@ -614,3 +618,20 @@ def read_portfolio_composition(portfolio, min_value=0.01):
             composition[ticker] = weight
     
     return composition
+
+
+def update_portfolio(portfolio_dict):
+    result = create_portfolio(
+        data=portfolio_dict["untouched_data"],
+        tickers=portfolio_dict["tickers"],
+        investments=portfolio_dict["investments"],
+        market_ticker=portfolio_dict["market_ticker"],
+        name_portfolio=portfolio_dict["name"],
+        base_currency=portfolio_dict["base_currency"],
+        return_period_days=portfolio_dict["return_period_days"],
+        rebalancing_period_days=portfolio_dict["auto_rebalance"],
+        target_weights=portfolio_dict["target_weights"],
+        exclude_ticker_time=portfolio_dict["exclude_ticker_time"],
+        exclude_ticker=portfolio_dict["exclude_ticker"]
+    )
+    return result

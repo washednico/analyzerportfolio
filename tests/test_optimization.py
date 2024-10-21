@@ -1,5 +1,6 @@
 from analyzerportfolio.optimization import (
-optimize
+optimize,
+efficient_frontier
     )
 
 from analyzerportfolio.utils import (
@@ -63,3 +64,5 @@ if False:
 
         print("Information Ratio before optimization: ", information_ratio1)
         print("Information Ratio optimization: ", info_optimized)
+
+        efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_1], colors=["orange","blue"])

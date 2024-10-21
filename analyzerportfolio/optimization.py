@@ -304,9 +304,9 @@ def efficient_frontier(
     colors: Union[str, List[str]] = None,
 ):
     """
-    Computes the efficient frontier for the given portfolio and plots only the upper part of the efficient frontier (above the minimum variance portfolio).
+    Computes the efficient frontier for the given portfolio and plots only the upper part of the efficient frontier
+    (above or at the minimum variance portfolio).
     """
-    
     # Ensure portfolios is a list
     if isinstance(additional_portfolios, dict):
         additional_portfolios = [additional_portfolios]
@@ -357,16 +357,23 @@ def efficient_frontier(
         'target_weights': None  # or weights, depending on your library
     }
 
-    # Compute the Minimum Variance Portfolio (MVP)
+    # Compute the Minimum Variance Portfolio (MVP) using volatility_objective
     min_var_result = minimize(
-        portfolio_return_scalar,
+        volatility_objective,  # Minimize volatility
         initial_weights,
         args=(data, tickers, total_investment, other_params),
         method=method,
         bounds=bounds,
         constraints=constraints
     )
-    min_var_return = portfolio_return(min_var_result.x, data, tickers, total_investment, other_params)
+
+    # Extract the optimal weights from the result
+    min_var_weights = min_var_result.x
+
+    # Calculate the volatility and return for the Minimum Variance Portfolio
+    min_var_volatility = ap.c_volatility(ap.create_portfolio(data, tickers, investments=min_var_weights * total_investment, **other_params))
+    min_var_return = portfolio_return(min_var_weights, data, tickers, total_investment, other_params)
+
 
     # Compute the Maximum Return Portfolio (MRP)
     max_return_result = minimize(
@@ -378,8 +385,9 @@ def efficient_frontier(
         constraints=constraints
     )
     max_return = portfolio_return(max_return_result.x, data, tickers, total_investment, other_params)
+    
 
-    # Generate target returns above the minimum variance portfolio (exclude lower part)
+    # Generate target returns including those below MVP return, but filter later
     target_returns = np.linspace(min_var_return, max_return, num_points)
 
     # Prepare arguments for optimization
@@ -418,9 +426,12 @@ def efficient_frontier(
             )
             ret = ap.c_return(updated_portfolio)
             vol = ap.c_volatility(updated_portfolio)
-            portfolio_returns.append(ret)
-            portfolio_volatilities.append(vol)
-            portfolio_weights.append(weights)
+            
+            # Keep only portfolios that are part of the upper frontier
+            if vol <= min_var_volatility or ret >= min_var_return:
+                portfolio_returns.append(ret)
+                portfolio_volatilities.append(vol)
+                portfolio_weights.append(weights)
         else:
             # Handle optimization failure
             print(f"Optimization failed for target return {result.x}")
@@ -428,6 +439,8 @@ def efficient_frontier(
 
     # Plot the efficient frontier using Plotly (only upper part)
     fig = go.Figure()
+    portfolio_volatilities.insert(0, min_var_volatility)
+    portfolio_returns.insert(0, min_var_return)
 
     # Add efficient frontier trace
     fig.add_trace(go.Scatter(
@@ -437,11 +450,10 @@ def efficient_frontier(
         name='Efficient Frontier'
     ))
 
-    # Add minimum variance portfolio
-    min_vol_index = np.argmin(portfolio_volatilities)
+    # Plot the Minimum Variance Portfolio
     fig.add_trace(go.Scatter(
-        x=[portfolio_volatilities[min_vol_index]],
-        y=[portfolio_returns[min_vol_index]],
+        x=[min_var_volatility],
+        y=[min_var_return],
         mode='markers',
         name='Minimum Variance Portfolio',
         marker=dict(color='red', size=10)

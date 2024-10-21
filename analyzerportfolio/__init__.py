@@ -5,6 +5,7 @@ from .utils import get_current_rate
 from .utils import download_data
 from .utils import create_portfolio
 from .utils import read_portfolio_composition
+from .utils import update_portfolio
 
 from .metrics import c_total_return
 from .metrics import c_return
