@@ -318,16 +318,16 @@ def efficient_frontier(
     """
 
     # Ensure portfolios is a list
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
+    if isinstance(additional_portfolios, dict):
+        additional_portfolios = [additional_portfolios]
 
     # Ensure colors is a list
     if colors is None:
-        colors = [None] * len(portfolios)
+        colors = [None] * len(additional_portfolios)
     elif isinstance(colors, str):
         colors = [colors]
     elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
+        if len(colors) != len(additional_portfolios):
             raise ValueError("The length of 'colors' must match the number of portfolios.")
     else:
         raise ValueError("Invalid type for 'colors' parameter.")
