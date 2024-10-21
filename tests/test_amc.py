@@ -57,11 +57,11 @@ if True:
                 ticker.append(etf)
                 investments.append(100000)
 
-        ticker = ["CSPX.L", "IWDA.L","EIMI.L","IEAC.L","IMAE.AS","EQQQ.MI",
-                  "XZMU.L","1674.T","SLVR.DE","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
+        ticker = ["CSPX.L", "IWDA.L","EIMI.L","IEAC.L", "EQQQ.MI",
+                  "XZMU.L","1674.T","CMOD.MI","GSCE.MI","AIGC.MI","AIGE.L",
                   "IMEU.AS", "XDEW.MI", "QDVE.DE", "DGRW", "ITA", "FNDX", "FDVV", "MLPX",
                   "R2US.PA", "EWC", "GDX", "SIL","006208.TW","EZU","BBUS","INR.PA","SGLD.L",
-                  "SLV","DYNF","IBC1.MU","USCO.MI","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI"]
+                  "SLV","DYNF","IBC1.MU","IEMB.MI","ECRP.MI","SUOE.MI", "XD9U.DE","XMEU.MI"]
         
         
         for i in ticker:
@@ -73,7 +73,6 @@ if True:
         base_currency = 'USD'
         risk_free = "PCREDIT8"
         colors = ["orange"]
-        
         
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/leonardo/Desktop/cache/etf")
