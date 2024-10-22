@@ -54,7 +54,7 @@ if True:
         
         
         for i in ticker:
-            investments.append(100000)
+            investments.append(100_000_000/len(ticker))
         
         start_date = '2020-08-27'
         end_date = '2024-10-07'
@@ -66,7 +66,7 @@ if True:
         
         data = download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency, market_ticker=market_ticker, risk_free=risk_free, use_cache=True, folder_path="/Users/nicolafochi/Desktop/cache/etf")
         portfolio_1 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Equally Weighted", base_currency=base_currency, exclude_ticker= True, exclude_ticker_time= 7, rebalancing_period_days=1)
-        
+        portoflio__benchmark = create_portfolio(data, tickers=["benchmark"], investments=[100000], market_ticker=market_ticker, name_portfolio="Benchmark", base_currency=base_currency, rebalancing_period_days=1)
         
         print("Information ratio before optimization", c_info_ratio(portfolio_1))
         print("Sharpe ratio after before optimization ", c_sharpe(portfolio_1))
@@ -74,6 +74,7 @@ if True:
 
         portfolio_optimized = optimize(portfolio_1, metric='information_ratio')
         portfolio_optimized = remove_small_weights(portfolio_optimized)
+        print(read_portfolio_composition(portfolio_optimized))
         portfolio_optimized["name"] = "Optimized Portfolio Information"
 
         print("Information ratio after information optimization",c_info_ratio(portfolio_optimized))
@@ -87,9 +88,8 @@ if True:
         print("Information ratio after sharp optimization",c_info_ratio(portfolio_optimized_sharpe))
         print("Sharpe ratio after sharpe optimization ", c_sharpe(portfolio_optimized))
 
-        pie_chart(portfolio_optimized)
-        pie_chart(portfolio_optimized_sharpe)
-        pie_chart(portfolio_1)
+        pie_chart(portfolio_optimized, transparent=True)
+        
         
         garch([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], plot_difference=True, colors = colors)
         
@@ -106,7 +106,7 @@ if True:
         drawdown([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors = colors)
 
         if True:
-            result = efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors=colors)
+            result = efficient_frontier(portfolio_1,num_points=17, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe,portfolio_1,portoflio__benchmark], colors=colors.append("green"))
         
         
 

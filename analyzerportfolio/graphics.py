@@ -580,21 +580,19 @@ def pie_chart(
         portfolios: Union[dict, List[dict]], 
         colors: Union[str, List[str]] = None, 
         plot: bool = True,
-        threshold: float = 0.001):
+        threshold: float = 0.001,
+        transparent: bool = False):
     """
     Plot a pie chart showing the asset allocation of an ETF-based investment strategy for one or multiple portfolios using Plotly.
     Small allocations (less than the threshold) are grouped into an "All Others" category.
     
     Parameters:
     - portfolios (Union[dict, List[dict]]): A dictionary or a list of portfolio dictionaries, each representing a portfolio.
-
     - colors (Union[str, List[str]], optional): A string representing a single color or a list of colors for the portfolio segments.
       If not provided, default colors will be used.
-
     - plot (bool, optional): Whether to plot the pie chart using Plotly (default is True).
-    
     - threshold (float, optional): The allocation threshold below which allocations are grouped into "All Others" (default is 0.001).
-
+    
     Returns:
     - None. The pie chart will be displayed if plot is set to True.
     """
@@ -605,9 +603,9 @@ def pie_chart(
 
     # Ensure colors is a list
     if colors is None:
-        colors = [None] * len(portfolios)
+        colors = [None] * len(portfolios)  # If no colors, default to None for each portfolio
     elif isinstance(colors, str):
-        colors = [colors]
+        colors = [colors] * len(portfolios)  # Apply the same color to all portfolios if a single color is provided
     elif isinstance(colors, list):
         if len(colors) != len(portfolios):
             raise ValueError("The length of 'colors' must match the number of portfolios.")
@@ -616,7 +614,6 @@ def pie_chart(
     
     # Check if at least one portfolio is passed
     if len(portfolios) > 0:
-
         for portfolio, color in zip(portfolios, colors):
             name = portfolio['name']
             tickers = portfolio['tickers']
@@ -639,12 +636,27 @@ def pie_chart(
             
             # Show the pie chart if plot is True
             if plot:
-                fig = go.Figure(data=[go.Pie(labels=labels, values=sizes, hole=.3, marker=dict(colors=color))])
-                
+                # Create a pie chart
+                fig = go.Figure(data=[go.Pie(
+                    labels=labels, 
+                    values=sizes, 
+                    hole=.3,
+                    textinfo='label+percent',  # Show both label and percentage on the chart
+                    textposition='inside',  # Position text inside the slices
+                )])
+
+                # Update the layout for the pie chart
                 fig.update_layout(
-                    title_text=f"{name} - Portfolio Asset Allocation"
+                    title_text=f"{name} - Portfolio Asset Allocation",
+                    showlegend=False,  # Hide the legend
+                    title_font_size=20,
+                    paper_bgcolor='black',  # Set background color to black
+                    font_color='white',     # Set text color to white
                 )
 
+                # Display the pie chart
+                if transparent:
+                    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 fig.show()
 
 def distribution_return(
