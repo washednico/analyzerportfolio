@@ -106,7 +106,15 @@ if True:
         drawdown([portfolio_optimized,portfolio_optimized_sharpe,portfolio_1], colors = colors)
 
         if True:
-            result = efficient_frontier(portfolio_1,num_points=17, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe,portfolio_1,portoflio__benchmark], colors=colors.append("green"))
+            result = efficient_frontier(portfolio_1,num_points=3, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_optimized_sharpe,portfolio_1,portoflio__benchmark], colors=colors.append("green"))
+        
+        for i in result:
+            import random
+            x = random.randint(0, 1000000)
+            portfolio = result[i]
+            print(str(x)+" Efficient Frontier - Sharpe: ",c_sharpe(portfolio)," - Information Ratio: ",c_info_ratio(portfolio))
+            portfolio["name"] = "Efficient Frontier Portfolio " + str(x)
+            pie_chart(i)
         
         
 

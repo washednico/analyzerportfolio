@@ -333,6 +333,8 @@ def efficient_frontier(
     target_weights = portfolio["target_weights"]  
     return_period_days = portfolio['return_period_days']
     portfolio_name = portfolio['name']
+    exclude_ticker_time=portfolio["exclude_ticker_time"]
+    exclude_ticker=portfolio["exclude_ticker"]
 
     total_investment = sum(initial_investments)
 
@@ -354,7 +356,10 @@ def efficient_frontier(
         'base_currency': base_currency,
         'rebalancing_period_days': rebalancing_period_days,
         'return_period_days': return_period_days,
-        'target_weights': None  # or weights, depending on your library
+        'target_weights': target_weights,
+        "exclude_ticker_time" : exclude_ticker_time,
+        "exclude_ticker" :  exclude_ticker,
+         # or weights, depending on your library
     }
 
     # Compute the Minimum Variance Portfolio (MVP) using volatility_objective
@@ -493,6 +498,8 @@ def efficient_frontier(
     # Create the dictionary of portfolios
     portfolios_dict = {}
 
+    # TODO - Check on portfolio dict
+    
     for i, weights in enumerate(portfolio_weights):
         investments = weights * total_investment
         # Create portfolio using 'create_portfolio'
