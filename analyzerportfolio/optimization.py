@@ -17,10 +17,14 @@ def optimize(portfolio: dict,
     
     Parameters:
     portfolio (dict): A portfolio dictionary created using the `create_portfolio` function.
+    metric (str): The metric to optimize for. It can be 'sharpe', 'drawdown', 'volatility', or 'information_ratio'.
     
     Returns:
     dict: The optimized portfolio dictionary with updated investments to maximize Sharpe ratio.
     """
+
+    if metric not in ['sharpe', 'drawdown', 'volatility', 'information_ratio']:
+        raise ValueError("Invalid metric. Choose from 'sharpe', 'drawdown', 'volatility', or 'information_ratio'.")
     
     tickers = portfolio['tickers']
     initial_investments = portfolio['investments']

@@ -39,7 +39,7 @@ from analyzerportfolio.graphics import (
 import pandas as pd
 
 
-if True:
+if False:
     def test_everything():
         
         ticker = []

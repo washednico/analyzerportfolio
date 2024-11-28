@@ -434,21 +434,24 @@ def c_dividend_yield(portfolio : dict) -> float:
 
     return weighted_dividend_yield
 
-def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None) -> float:
+def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None, n_bootstrap_samples: int = 10000) -> float:
     """
-    Calculate the Value at Risk (VaR) of a portfolio using the historical method.
+    Calculate the Value at Risk (VaR) of a portfolio using a chosen method: historical, parametric, or bootstrap.
 
     Parameters:
     - portfolio (dict): Dictionary created from the create_portfolio function.
-    - confidence_level (float, optional): The confidence level for the VaR calculation. 
+    - confidence_level (float, optional): The confidence level for the VaR calculation.
       Defaults to 0.95 (95% confidence).
-    - horizon_days (int, optional): The number of days ahead for the VaR calculation. 
+    - horizon_days (int, optional): The number of days ahead for the VaR calculation.
       Defaults to 1 day.
-    - method (str, optional): The method used to calculate VaR. historical or parametric. Historical by default.
+    - method (str, optional): The method used to calculate VaR. Options are 'historical', 'parametric', or 'bootstrap'.
+      Defaults to 'historical'.
     - portfolio_value (int, optional): The value of the portfolio. If not provided, the VaR will be calculated based on the last portfolio value.
+    - n_bootstrap_samples (int, optional): Number of bootstrap samples to generate for the bootstrap method.
+      Defaults to 10,000.
 
     Returns:
-    - float: The Value at Risk (VaR) of the portfolio at the specified confidence level 
+    - float: The Value at Risk (VaR) of the portfolio at the specified confidence level
       and time horizon.
     """
     return_days = portfolio['return_period_days']
@@ -462,34 +465,57 @@ def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1
     if method == "historical":
         # Calculate the daily Value at Risk (VaR) using the historical method
         VaR = portfolio_returns.quantile(1 - confidence_level)
+
     elif method == "parametric":
-        # Calculate the mean and standard deviation of the portfolio returns
+        # Calculate the daily Value at Risk (VaR) by assuming normal distribution of returns
         mean_return = portfolio_returns.mean()
         std_dev = portfolio_returns.std()
-
         # Calculate the z-score for the specified confidence level
         z_score = norm.ppf(confidence_level)
-
         # Calculate the Value at Risk (VaR) using the parametric method
         VaR = mean_return - z_score * std_dev
+
+    elif method == "bootstrap": # Reference: Bootstrap for Value at Risk Prediction - Rjiba, Meriem et all. (2015)
+        
+        # Drop NaN values from portfolio returns
+        portfolio_returns = portfolio['portfolio_returns'].dropna()
+
+        # Check if there is sufficient data after dropping NaN values. The limit has been choosen for daily returns following the reference
+        # Reference: Basel Committee on Banking Supervision. “Amendment to the Capital Accord to Incorporate Market Risks.” Bank for International Settlements, 1996.
+        if len(portfolio_returns) < 100:
+            raise ValueError("Insufficient data in portfolio returns after removing NaN values.")
+        
+        # Generating bootstrap samples from the returns 
+        bootstrap_samples = np.random.choice(portfolio_returns, (n_bootstrap_samples, len(portfolio_returns)), replace=True) 
+        # Calculate the desidered percentile for each sample
+        bootstrap_quantile = np.percentile(bootstrap_samples, 100*(1-confidence_level), axis=1)
+
+        # Check for NaN values in the quantile array before calculating the mean
+        if np.isnan(bootstrap_quantile).any():
+            raise ValueError("NaN values found in bootstrap quantiles.")
+        
+        # Calculate the aveage of the percentile
+        VaR = np.mean(bootstrap_quantile)
+        
     else:
-        raise ValueError("Invalid method. Choose 'historical' or 'parametric'.")
+        raise ValueError("Invalid method. Choose 'historical' or 'parametric' or 'bootstrap'.")
 
     # Annualize the VaR for the specified time horizon
     VaR_annualized = VaR * np.sqrt(horizon_days/return_days) * portfolio_value
 
     return abs(VaR_annualized)
 
-def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None) -> float:
+def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1, method: str = "historical", portfolio_value: int = None, n_bootstrap_samples: int = 10000) -> float:
     """
-    Calculate the Expected Shortfall (ES), also known as Conditional VaR (CVaR), of a portfolio using the historical or parametric method.
+    Calculate the Expected Shortfall (ES), also known as Conditional VaR (CVaR), of a portfolio using a chosen method: historical, parametric, or bootstrap.
 
     Parameters:
     - portfolio (dict): Dictionary created from the create_portfolio function.
     - confidence_level (float, optional): The confidence level for the ES calculation. Defaults to 0.95 (95% confidence).
     - horizon_days (int, optional): The number of days ahead for the ES calculation. Defaults to 1 day.
-    - method (str, optional): The method used to calculate ES. Options: 'historical' or 'parametric'. Defaults to 'historical'.
+    - method (str, optional): The method used to calculate ES. Options: 'historical', 'parametric', or 'bootstrap'. Defaults to 'historical'.
     - portfolio_value (int, optional): The value of the portfolio. If not provided, the ES will be calculated based on the last portfolio value.
+    - n_bootstrap_samples (int, optional): Number of bootstrap samples to generate for the bootstrap method. Defaults to 10,000.
 
     Returns:
     - float: The Expected Shortfall (ES) of the portfolio at the specified confidence level and time horizon.
@@ -525,8 +551,33 @@ def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1,
         # ES = mean - std_dev * (PDF of z-score) / (1 - confidence level)
         pdf_z = norm.pdf(z_score)
         ES = - (mean_return - (std_dev * (pdf_z / (1 - confidence_level))))
+    
+    elif method == "bootstrap":
+        # Drop NaN values from portfolio returns
+        portfolio_returns = portfolio['portfolio_returns'].dropna()
+
+        # Check if there is sufficient data after dropping NaN values
+        if len(portfolio_returns) < 100:
+            raise ValueError("Insufficient data in portfolio returns after removing NaN values.")
+        
+        # Generating bootstrap samples from the returns
+        bootstrap_samples = np.random.choice(portfolio_returns, (n_bootstrap_samples, len(portfolio_returns)), replace=True)
+
+        # Calculate ES for each bootstrap sample
+        bootstrap_ES = []
+        for sample in bootstrap_samples:
+            # Calculate VaR for the bootstrap sample
+            sample_VaR = np.percentile(sample, 100 * (1 - confidence_level))
+            
+            # Calculate ES as the average of returns below the sample VaR
+            sample_ES = np.mean(sample[sample <= sample_VaR])
+            bootstrap_ES.append(sample_ES)
+        
+        # Calculate the average of the ES values from all bootstrap samples
+        ES = np.mean(bootstrap_ES)
+    
     else:
-        raise ValueError("Invalid method. Choose 'historical' or 'parametric'.")
+        raise ValueError("Invalid method. Choose 'historical', 'parametric', or 'bootstrap'.")
 
     # Annualize the Expected Shortfall for the specified time horizon
     ES_annualized = ES * np.sqrt(horizon_days / return_days) * portfolio_value

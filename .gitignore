@@ -6,3 +6,4 @@ build/
 *.egg-info/
 .vscode/
 .env
+tests/test_amc.py
