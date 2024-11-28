@@ -120,9 +120,28 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
     """
 
-    
+    def validate_tickers(tickers):
+        """
+        Validates the tickers list:
+        1. Checks if `tickers` is a list.
+        2. Ensures all elements are strings.
+        3. Verifies that tickers are reasonably short (e.g., > 6 characters).
+        4. Verifies that tickers do not contain spaces. 
+        """
+        if not isinstance(tickers, list):
+            raise ValueError("Tickers must be provided as a list. Ensure each ticker is separated by a comma.")
+        if not all(isinstance(ticker, str) for ticker in tickers):
+            raise ValueError("All elements in the tickers list must be strings representing ticker symbols.")
+        for ticker in tickers:
+            if len(ticker) >= 6:  # Assuming no valid ticker exceeds 6 characters
+                raise ValueError(f"Invalid ticker detected: {ticker}. Check for missing commas.")
+            if " " in ticker:  # Catch invalid tickers with spaces
+                raise ValueError(f"Invalid ticker detected: {ticker}. Tickers should not contain spaces.")
+        return True
+        
     exchange_rate_cache = {}
     stock_data = pd.DataFrame()
+    validate_tickers(tickers)
 
     def cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path):
         csv_exchange_rate = "/"+base_currency+"_"+currency+".csv"
@@ -200,9 +219,6 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
             print("Risk Free request failed with status code:", response.status_code)
             return None
         
-        
-
-    
     def cached_interest_rates(risk_free, start_date, end_date, folder_path):
         try:
             interest_rate_df = pd.read_csv(folder_path + "/"+risk_free+".csv", index_col=0, parse_dates=True)
@@ -231,10 +247,6 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
             interest_rate.to_csv(folder_path + "/"+risk_free+".csv")
             return interest_rate
 
-                
-    
-
-    
     # Fetch and process each stock's data
     if use_cache:
         for ticker in tickers + [market_ticker]:
@@ -312,7 +324,6 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 stock_data[ticker] = data
 
                 
-
     else:
         for ticker in tickers + [market_ticker]:
             data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
