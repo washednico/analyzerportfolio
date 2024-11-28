@@ -268,7 +268,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                     ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')
                     missing_data.index = pd.to_datetime(missing_data.index, errors='coerce')
                     full_stock_data = pd.concat([ticker_data, missing_data]).sort_index()
-
+                    full_stock_data = full_stock_data[~full_stock_data.index.duplicated(keep='last')]
                     data_to_save = full_stock_data.copy()
                     data_to_save.name = f"Adj Close {currency}"
                     data_to_save.to_csv(folder_path + "/"+ticker+".csv")
@@ -297,8 +297,13 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 # Reindex the data to the complete date range and fill missing entries with NaN
                 data = data.reindex(date_range)
 
-                
                 currency = get_currency(ticker)
+                data_to_save = data.copy()
+                data_to_save.name = f"Adj Close {currency}"
+                data_to_save.to_csv(folder_path + "/"+ticker+".csv")
+
+                
+                
                 if currency != base_currency:
                     
                     exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
@@ -306,9 +311,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
         
                 stock_data[ticker] = data
 
-                data_to_save = data.copy()
-                data_to_save.name = f"Adj Close {currency}"
-                data_to_save.to_csv(folder_path + "/"+ticker+".csv")
+                
 
     else:
         for ticker in tickers + [market_ticker]:
