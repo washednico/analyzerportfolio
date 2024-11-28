@@ -167,10 +167,13 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
             # Convert 'Date' to datetime and set as index
             interest_data['Date'] = pd.to_datetime(interest_data['Date'])
             interest_data.set_index('Date', inplace=True)
+            
 
             # Ensure 'stock_data' index is datetime and aligned
             stock_data.index = pd.to_datetime(stock_data.index)
 
+            stock_data.index = stock_data.index.tz_localize(None)
+            interest_data.index = interest_data.index.tz_localize(None)
             # Reindex 'interest_data' to match 'stock_data' dates
             interest_data = interest_data.reindex(stock_data.index)
             
@@ -183,6 +186,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
             interest_data['Interest_Rates'] = interest_data['Interest_Rates'].ffill()
             interest_data['Interest_Rates'] = interest_data['Interest_Rates'].bfill()
             return interest_data
+
         else:
             print("Risk Free request failed with status code:", response.status_code)
             return None
@@ -313,12 +317,14 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     else:
         interest_data = get_interest_rates(risk_free, start_date, end_date)
         
+        
+            
+             
             
     
     if interest_data is not None:
         # Merge on index
         dataframe = stock_data.join(interest_data, how='inner')
-        
         return dataframe
     else:
         return None
@@ -402,6 +408,8 @@ def create_portfolio(
         - 'Rebalanced_Portfolio_Returns' and 'Rebalanced_Portfolio_Value' columns (if rebalancing is performed).
         - 'Market_Returns' and 'Market_Value' columns (if market_ticker is provided).
     """
+    
+
     # Configure the logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
