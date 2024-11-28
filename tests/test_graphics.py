@@ -13,7 +13,7 @@ from analyzerportfolio.utils import (
     download_data,
     create_portfolio
 )
-if False:
+if True:
     def test_everything():
         colors_1 = "orange" #OPTIONAL
         colors_4 = ["orange","blue","purple","red"]  #OPTIONAL

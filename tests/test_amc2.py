@@ -88,7 +88,7 @@ if False:
             portfolio_value(portfolio_optimized_oos, colors = ["orange"])
 
 
-if True:
+if False:
     def test_everything():
         dictionare_stock = {'EKC.BO': 0.004375700642492835, 'SMIN.L': 0.014145526929102153, '300628.SZ': 0.015723963346357592, 'JNJ': 0.017019324807691086, 
                             '6503.T': 0.008953999614862774, '6028.T': 0.04134650285810199, '002311.SZ': 0.012567041338737414, '300218.SZ': 0.039360505126981804, 

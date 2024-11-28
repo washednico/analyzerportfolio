@@ -33,7 +33,16 @@ def convert_to_base_currency(prices, exchange_rate):
     """Convert prices to the base currency using the exchange rate."""
     if exchange_rate is None:
         return prices  # Already in base currency
-    return prices * exchange_rate
+
+    # Align exchange_rate index with prices index
+    exchange_rate_aligned = exchange_rate.reindex(prices.index).ffill().bfill()
+
+    # Ensure exchange_rate_aligned is a Series
+    if isinstance(exchange_rate_aligned, pd.DataFrame):
+        exchange_rate_aligned = exchange_rate_aligned.squeeze()
+
+    return prices.multiply(exchange_rate_aligned, axis=0)
+
 
 def get_stock_info(ticker):
     """Fetch stock info including target prices from yfinance."""
