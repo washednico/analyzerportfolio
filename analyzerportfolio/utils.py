@@ -122,21 +122,29 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
 
     def validate_tickers(tickers):
         """
-        Validates the tickers list:
-        1. Checks if `tickers` is a list.
-        2. Ensures all elements are strings.
-        3. Verifies that tickers are reasonably short (e.g., > 6 characters).
-        4. Verifies that tickers do not contain spaces. 
+        Validates the tickers list to ensure it is properly formatted:
+        1. Confirms that `tickers` is a list.
+        2. Verifies all elements in the list are strings.
+        3. Flags invalid tickers based on specific rules:
+        - Tickers should not contain spaces.
+        - Tickers should not exceed 15 characters in length (adjustable based on context).
+        - Tickers with both letters and numbers should not exceed 10 characters (to detect concatenated tickers).
+        
+        Raises:
+        ValueError: If any validation condition is violated.
         """
         if not isinstance(tickers, list):
             raise ValueError("Tickers must be provided as a list. Ensure each ticker is separated by a comma.")
         if not all(isinstance(ticker, str) for ticker in tickers):
             raise ValueError("All elements in the tickers list must be strings representing ticker symbols.")
+        
         for ticker in tickers:
-            if len(ticker) >= 6:  # Assuming no valid ticker exceeds 6 characters
-                raise ValueError(f"Invalid ticker detected: {ticker}. Check for missing commas.")
-            if " " in ticker:  # Catch invalid tickers with spaces
+            if " " in ticker:  # Flag tickers with spaces as invalid
                 raise ValueError(f"Invalid ticker detected: {ticker}. Tickers should not contain spaces.")
+            if len(ticker) > 15:  # Flag tickers exceeding maximum reasonable length
+                raise ValueError(f"Invalid ticker detected: {ticker}. Check for missing commas.")
+            if any(c.isdigit() for c in ticker) and len(ticker) > 10:  # Detect concatenated tickers (letters + numbers)
+                raise ValueError(f"Potentially invalid ticker detected: {ticker}. Check for missing commas.")
         return True
         
     exchange_rate_cache = {}
