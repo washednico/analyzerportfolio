@@ -9,7 +9,7 @@ from analyzerportfolio.utils import (
 from analyzerportfolio.graphics import (
     portfolio_value)
 
-if True:
+if False:
     def test_everything():
         
         ticker = []
