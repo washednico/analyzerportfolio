@@ -18,14 +18,14 @@ analyzerportfolio is a Python package designed for comprehensive portfolio analy
 ~simulate_dca~  
 ~monitor_news~  
 ~probability_cone~        
-optimization 
+~optimization~  
 
 ## Working in progress
 ~Heatmap between portfolios~
 ~Expected Shortfall~  
-Kelly criterion  
-Fractals model   
-Different types of VaR    
+Kelly criterion????  
+Fractals model???   
+~Different types of VaR~     
 
 ## To Push once everything is finished
 newsletter_report   
