@@ -4,7 +4,7 @@ from scipy.stats import norm
 import logging
 import statsmodels.api as sm
 import yfinance as yf
-
+from scipy.optimize import minimize
 
 from analyzerportfolio.utils import (
     get_stock_info, 
@@ -444,7 +444,7 @@ def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1
       Defaults to 0.95 (95% confidence).
     - horizon_days (int, optional): The number of days ahead for the VaR calculation.
       Defaults to 1 day.
-    - method (str, optional): The method used to calculate VaR. Options are 'historical', 'parametric', or 'bootstrap'.
+    - method (str, optional): The method used to calculate VaR. Options are 'historical', 'parametric', or 'bootstrap' or 'EVT'.
       Defaults to 'historical'.
     - portfolio_value (int, optional): The value of the portfolio. If not provided, the VaR will be calculated based on the last portfolio value.
     - n_bootstrap_samples (int, optional): Number of bootstrap samples to generate for the bootstrap method.
@@ -496,7 +496,64 @@ def c_VaR(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1
         
         # Calculate the aveage of the percentile
         VaR = np.mean(bootstrap_quantile)
+
+    elif method == "EVT":
+        """
+        The EVT estimates are calculated using the Generalized Pareto Distribution (GPD)
+        and maximum likelihood estimation (MLE).
+        """
+
+        def gpd_log_likelihood(params, exceedances, threshold):
+            """
+            Generalized Pareto Distribution. Reference: Gnedenko (1943)
+            """
+            β, ξ = params
+            if β <= 0 or ξ <= 0:
+                 return np.inf  # Ensure valid parameters
+            term = 1 + (ξ * (exceedances - threshold) / β)
+            if np.any(term <= 0): # Prevent invalid log or power operations
+                return np.inf
+            return -np.sum(np.log((1 / β) * (term ** (-1 / ξ - 1))))
+
+        # Drop NaN values from portfolio returns
+        portfolio_returns = portfolio['portfolio_returns'].dropna()
+
+        # Handle the case the portfolio is empty 
+        if portfolio_returns.empty:
+            raise ValueError("Portfolio returns data is empty.")
+
+        # sorting returns in ascending order
+        sorted_losses = np.sort(portfolio_returns)[::-1] * -1 
+
+        # Set the threshold as the quantile of the portfolio returns
+        threshold = np.quantile(sorted_losses, confidence_level)
+        n = len(sorted_losses)
+
+        # Filter exceedances above the threshold
+        exceedances = sorted_losses[sorted_losses > threshold]
+        nu = len(exceedances)
+        print("nu is ", nu)
+
+        # Ensure sufficient right/left hand losses
+        if nu < 10:
+            raise ValueError("Insufficient exceedances for EVT modeling. Consider lowering the confidence_level.")
+
+        # initializing guess for β and ξ
+        initial_params = [40, 0.3]
+
+        # defining bounds for β and ξ to ensure they are > 0
+        bounds = [(0.001, None), (0.001, None)] 
+
+        # optimizing using scipy's minimize function
+        result = minimize(gpd_log_likelihood, initial_params,  method="L-BFGS-B", args=(exceedances, threshold), bounds=bounds)
+        if not result.success:
+            raise RuntimeError(f"Optimization failed: {result.message}")
         
+        ξ_hat, β_hat = result.x
+
+        # Calculate Value at Risk (VaR)
+        VaR = threshold + np.divide(β_hat, ξ_hat) * ((np.divide(n, nu) * np.power((1 - confidence_level), -ξ_hat) - 1))
+
     else:
         raise ValueError("Invalid method. Choose 'historical' or 'parametric' or 'bootstrap'.")
 
@@ -511,11 +568,15 @@ def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1,
 
     Parameters:
     - portfolio (dict): Dictionary created from the create_portfolio function.
-    - confidence_level (float, optional): The confidence level for the ES calculation. Defaults to 0.95 (95% confidence).
-    - horizon_days (int, optional): The number of days ahead for the ES calculation. Defaults to 1 day.
-    - method (str, optional): The method used to calculate ES. Options: 'historical', 'parametric', or 'bootstrap'. Defaults to 'historical'.
+    - confidence_level (float, optional): The confidence level for the ES calculation.
+      Defaults to 0.95 (95% confidence).
+    - horizon_days (int, optional): The number of days ahead for the ES calculation. 
+      Defaults to 1 day.
+    - method (str, optional): The method used to calculate ES. Options: 'historical', 'parametric', or 'bootstrap' or 'EVT' . 
+      Defaults to 'historical'.
     - portfolio_value (int, optional): The value of the portfolio. If not provided, the ES will be calculated based on the last portfolio value.
-    - n_bootstrap_samples (int, optional): Number of bootstrap samples to generate for the bootstrap method. Defaults to 10,000.
+    - n_bootstrap_samples (int, optional): Number of bootstrap samples to generate for the bootstrap method. 
+      Defaults to 10,000.
 
     Returns:
     - float: The Expected Shortfall (ES) of the portfolio at the specified confidence level and time horizon.
@@ -576,6 +637,66 @@ def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1,
         # Calculate the average of the ES values from all bootstrap samples
         ES = np.mean(bootstrap_ES)
     
+    elif method == "EVT":
+        """
+        The EVT estimates are calculated using the Generalized Pareto Distribution (GPD)
+        and maximum likelihood estimation (MLE).
+        """
+
+        def gpd_log_likelihood(params, exceedances, threshold):
+            """
+            Generalized Pareto Distribution. Reference: Gnedenko (1943)
+            """
+            β, ξ = params
+            if β <= 0 or ξ <= 0:
+                 return np.inf  # Ensure valid parameters
+            term = 1 + (ξ * (exceedances - threshold) / β)
+            if np.any(term <= 0): # Prevent invalid log or power operations
+                return np.inf
+            return -np.sum(np.log((1 / β) * (term ** (-1 / ξ - 1))))
+
+        # Drop NaN values from portfolio returns
+        portfolio_returns = portfolio['portfolio_returns'].dropna()
+
+        # Handle the case the portfolio is empty 
+        if portfolio_returns.empty:
+            raise ValueError("Portfolio returns data is empty.")
+
+        # sorting returns in ascending order
+        sorted_losses = np.sort(portfolio_returns)[::-1] * -1 
+
+        # Set the threshold as the quantile of the portfolio returns
+        threshold = np.quantile(sorted_losses, confidence_level)
+        n = len(sorted_losses)
+
+        # Filter exceedances above the threshold
+        exceedances = sorted_losses[sorted_losses > threshold]
+        nu = len(exceedances)
+        print("nu is ", nu)
+
+        # Ensure sufficient right/left hand losses
+        if nu < 10:
+            raise ValueError("Insufficient exceedances for EVT modeling. Consider lowering the confidence_level.")
+
+        # initializing guess for β and ξ
+        initial_params = [40, 0.3]
+
+        # defining bounds for β and ξ to ensure they are > 0
+        bounds = [(0.001, None), (0.001, None)] 
+
+        # optimizing using scipy's minimize function
+        result = minimize(gpd_log_likelihood, initial_params,  method="L-BFGS-B", args=(exceedances, threshold), bounds=bounds)
+        if not result.success:
+            raise RuntimeError(f"Optimization failed: {result.message}")
+        
+        ξ_hat, β_hat = result.x
+
+        # Calculate Value at Risk (VaR)
+        VaR = threshold + np.divide(β_hat, ξ_hat) * ((np.divide(n, nu) * np.power((1 - confidence_level), -ξ_hat) - 1))
+
+        # Calculate the ES
+        ES = np.divide((VaR + β_hat - ξ_hat * threshold), 1 - ξ_hat)
+
     else:
         raise ValueError("Invalid method. Choose 'historical', 'parametric', or 'bootstrap'.")
 
