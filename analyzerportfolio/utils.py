@@ -138,14 +138,19 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
         if not all(isinstance(ticker, str) for ticker in tickers):
             raise ValueError("All elements in the tickers list must be strings representing ticker symbols.")
         
-        for ticker in tickers:
-            if " " in ticker:  # Flag tickers with spaces as invalid
-                raise ValueError(f"Invalid ticker detected: {ticker}. Tickers should not contain spaces.")
-            if len(ticker) > 15:  # Flag tickers exceeding maximum reasonable length
-                raise ValueError(f"Invalid ticker detected: {ticker}. Check for missing commas.")
-            if any(c.isdigit() for c in ticker) and len(ticker) > 10:  # Detect concatenated tickers (letters + numbers)
-                raise ValueError(f"Potentially invalid ticker detected: {ticker}. Check for missing commas.")
-        return True
+
+        #TODO check here 
+        if False:
+            for ticker in tickers:
+                if " " in ticker:  # Flag tickers with spaces as invalid
+                    raise ValueError(f"Invalid ticker detected: {ticker}. Tickers should not contain spaces.")
+                if len(ticker) > 15:  # Flag tickers exceeding maximum reasonable length
+                    raise ValueError(f"Invalid ticker detected: {ticker}. Check for missing commas.")
+                if any(c.isdigit() for c in ticker) and len(ticker) > 10:  # Detect concatenated tickers (letters + numbers)
+                    raise ValueError(f"Potentially invalid ticker detected: {ticker}. Check for missing commas.")
+            return True
+        # ticker can contain spaces since if we import data from bmg they are "AAPL US Equity" for example
+        # same reason length coul be more.
         
     exchange_rate_cache = {}
     stock_data = pd.DataFrame()
@@ -279,16 +284,18 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
 
                 if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
                     missing_data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+                    missing_data.index = missing_data.index.tz_localize(None)
                     # Create a complete date range from start to end date
                     date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
 
                     # Reindex the data to the complete date range and fill missing entries with NaN
                     missing_data = missing_data.reindex(date_range)
-
+                    
                     ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')
                     missing_data.index = pd.to_datetime(missing_data.index, errors='coerce')
                     full_stock_data = pd.concat([ticker_data, missing_data]).sort_index()
                     full_stock_data = full_stock_data[~full_stock_data.index.duplicated(keep='last')]
+                    
                     data_to_save = full_stock_data.copy()
                     data_to_save.name = f"Adj Close {currency}"
                     data_to_save.to_csv(folder_path + "/"+ticker+".csv")
@@ -311,11 +318,12 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 end_date_dt = pd.to_datetime(end_date)
 
                 data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+                data.index = data.index.tz_localize(None)
 
                 date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
                 data = data.reindex(date_range)
                 # Reindex the data to the complete date range and fill missing entries with NaN
-                data = data.reindex(date_range)
+                
 
                 currency = get_currency(ticker)
                 data_to_save = data.copy()
