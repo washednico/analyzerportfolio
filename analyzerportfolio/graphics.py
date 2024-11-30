@@ -7,7 +7,7 @@ import plotly.io as pio
 from arch import arch_model
 from scipy.stats import norm
 from typing import Union, List, Dict
-
+import yfinance as yf
 
 # Set plotly template
 pio.templates.default = "plotly_dark"
@@ -659,6 +659,208 @@ def pie_chart(
                     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 fig.show()
 
+def sector_pie(
+        portfolios: Union[dict, List[dict]], 
+        colors: Union[str, List[str]] = None, 
+        plot: bool = True,
+        threshold: float = 0.001,
+        transparent: bool = False,
+        save_to_csv: bool = False, 
+        filename: str = "sector_data.csv", 
+        verbose: bool = False):
+    """
+    Generate a sector distribution pie chart based on equity portfolios.
+
+    Parameters:
+        portfolios (Union[dict, List[dict]]): Portfolio(s) containing 'name', 'tickers', and 'weights'.
+        colors (Union[str, List[str]], optional): Color scheme for the pie chart. Defaults to None.
+        plot (bool, optional): Whether to display the plot. Defaults to True.
+        threshold (float, optional): Minimum allocation for a sector to be displayed separately. Defaults to 0.001.
+        transparent (bool, optional): Whether the plot background should be transparent. Defaults to False.
+        save_to_csv (bool, optional): Whether to save the sector data to a CSV file. Defaults to False.
+        filename (str, optional): Filename for the CSV output. Defaults to "sector_data.csv".
+        verbose (bool, optional): Whether to display detailed logs. Defaults to False.
+
+    Returns:
+        None
+    """
+
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    # Validate colors
+    if isinstance(colors, str):
+        colors = [colors] * len(portfolios)
+    elif isinstance(colors, list) and len(colors) != len(portfolios):
+        raise ValueError("The length of 'colors' must match the number of portfolios.")
+    elif colors is None:
+        colors = [None] * len(portfolios)
+
+    # Check if portfolios are provided
+    if not portfolios:
+        raise ValueError("No portfolios provided.")
+
+    for portfolio, color in zip(portfolios, colors):
+        if verbose:
+            print(f"Processing portfolio: {portfolio['name']}")
+
+        # Create allocations
+        allocations = dict(zip(portfolio['tickers'], portfolio['weights']))
+
+        # Fetch sector data
+        sector_info = []
+        for ticker, weight in allocations.items():
+            try:
+                stock = yf.Ticker(ticker)
+                sector = stock.info.get('sector', 'Unknown')
+                sector_info.append({'Sector': sector, 'Weight': weight})
+            except Exception as e:
+                if verbose:
+                    print(f"Error fetching data for {ticker}: {e}")
+                sector_info.append({'Sector': 'Error', 'Weight': weight})
+
+        # Create a DataFrame
+        df = pd.DataFrame(sector_info)
+
+        # Aggregate weights by sector
+        sector_weights = df.groupby('Sector')['Weight'].sum()
+
+        # Filter sectors below the threshold
+        large_sectors = sector_weights[sector_weights >= threshold]
+        small_sectors_total = sector_weights[sector_weights < threshold].sum()
+
+        if small_sectors_total > 0:
+            large_sectors["All Others"] = small_sectors_total
+
+        # Save data
+        if save_to_csv:
+            sector_weights.to_csv(filename, header=["Weight"])
+            if verbose:
+                print(f"Data saved to {filename}")
+
+        # Plot pie chart
+        if plot:
+            fig = go.Figure(data=[go.Pie(
+                labels=large_sectors.index,
+                values=large_sectors.values,
+                hole=0.3,
+                textinfo='label+percent',
+                textposition='inside',
+                marker=dict(colors=color) if color else None,
+            )])
+
+            fig.update_layout(
+                title_text=f"Sector Distribution: {portfolio['name']}",
+                paper_bgcolor='rgba(0,0,0,0)' if transparent else 'white',
+                font_color='black',
+            )
+            fig.show()
+
+    if verbose:
+        print("Processing completed.")
+
+def country_pie(
+        portfolios: Union[dict, List[dict]], 
+        colors: Union[str, List[str]] = None, 
+        plot: bool = True,
+        threshold: float = 0.001,
+        transparent: bool = False,
+        save_to_csv: bool = False, 
+        filename: str = "geographical_data.csv", 
+        verbose: bool = False):
+    """
+    Generate a geographical distribution pie chart based on equity portfolios.
+
+    Parameters:
+        portfolios (Union[dict, List[dict]]): Portfolio(s) containing 'name', 'tickers', and 'weights'.
+        colors (Union[str, List[str]], optional): Color scheme for the pie chart. Defaults to None.
+        plot (bool, optional): Whether to display the plot. Defaults to True.
+        threshold (float, optional): Minimum allocation for a country to be displayed separately. Defaults to 0.001.
+        transparent (bool, optional): Whether the plot background should be transparent. Defaults to False.
+        save_to_csv (bool, optional): Whether to save the geographical data to a CSV file. Defaults to False.
+        filename (str, optional): Filename for the CSV output. Defaults to "geographical_data.csv".
+        verbose (bool, optional): Whether to display detailed logs. Defaults to False.
+
+    Returns:
+        None
+    """
+
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+
+    # Validate colors
+    if isinstance(colors, str):
+        colors = [colors] * len(portfolios)
+    elif isinstance(colors, list) and len(colors) != len(portfolios):
+        raise ValueError("The length of 'colors' must match the number of portfolios.")
+    elif colors is None:
+        colors = [None] * len(portfolios)
+
+    # Check if portfolios are provided
+    if not portfolios:
+        raise ValueError("No portfolios provided.")
+
+    for portfolio, color in zip(portfolios, colors):
+        if verbose:
+            print(f"Processing portfolio: {portfolio['name']}")
+
+        # Create allocations
+        allocations = dict(zip(portfolio['tickers'], portfolio['weights']))
+
+        # Fetch geographical data
+        geographical_info = []
+        for ticker, weight in allocations.items():
+            try:
+                stock = yf.Ticker(ticker)
+                country = stock.info.get('country', 'Unknown')
+                geographical_info.append({'Country': country, 'Weight': weight})
+            except Exception as e:
+                if verbose:
+                    print(f"Error fetching data for {ticker}: {e}")
+                geographical_info.append({'Country': 'Error', 'Weight': weight})
+
+        # Create a DataFrame
+        df = pd.DataFrame(geographical_info)
+
+        # Aggregate weights by country
+        country_weights = df.groupby('Country')['Weight'].sum()
+
+        # Filter countries below the threshold
+        large_countries = country_weights[country_weights >= threshold]
+        small_countries_total = country_weights[country_weights < threshold].sum()
+
+        if small_countries_total > 0:
+            large_countries["All Others"] = small_countries_total
+
+        # Save data
+        if save_to_csv:
+            country_weights.to_csv(filename, header=["Weight"])
+            if verbose:
+                print(f"Data saved to {filename}")
+
+        # Plot pie chart
+        if plot:
+            fig = go.Figure(data=[go.Pie(
+                labels=large_countries.index,
+                values=large_countries.values,
+                hole=0.3,
+                textinfo='label+percent',
+                textposition='inside',
+                marker=dict(colors=color) if color else None,
+            )])
+
+            fig.update_layout(
+                title_text=f"Geographical Distribution: {portfolio['name']}",
+                paper_bgcolor='rgba(0,0,0,0)' if transparent else 'white',
+                font_color='black',
+            )
+            fig.show()
+
+    if verbose:
+        print("Processing completed.")
+    
 def distribution_return(
     portfolios: Union[str, List[str]],
     bins: int = 100,
@@ -937,7 +1139,6 @@ def simulate_dca(
 
     return results
 
-
 def probability_cone(
     portfolio: dict,
     time_horizon: int,
@@ -1037,7 +1238,6 @@ def probability_cone(
         fig.show()
 
     return probability_cone_df
-
 
 def garch_diff(
     portfolios: Union[dict, List[dict]],
