@@ -6,6 +6,76 @@ import requests
 from io import StringIO
 from datetime import timedelta
 import re 
+import logging
+from .logger import logger 
+
+import logging
+
+def configure_logging(level=logging.INFO, log_file=None, console_level=None, verbose=False, style="detailed"):
+    """
+    Configures logging based on user preferences.
+
+    Parameters
+    ----------
+    level : int
+        Logging level for the logger (overall), e.g., logging.DEBUG, logging.INFO, etc.
+    log_file : str, optional
+        File path to save logs. If None, logs are only shown in the console.
+    console_level : int, optional
+        Specific logging level for the console handler. Defaults to the global level.
+    verbose : bool, optional
+        If True, console logs display at DEBUG level, regardless of console_level or global level.
+    style : str, optional
+        Logging style. Options are:
+        - "detailed": Includes timestamps, levels, and logger names.
+        - "print_like": Logs appear simple, like print statements.
+
+    Returns
+    -------
+    logging.Logger
+        Configured logger instance.
+    """
+    logger.setLevel(level)
+
+    # Remove existing handlers to avoid duplicates
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Formatters for different styles
+    detailed_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    print_like_formatter = logging.Formatter('%(message)s')
+
+    # Select formatter based on style
+    if style == "detailed":
+        formatter = detailed_formatter
+    elif style == "print_like":
+        formatter = print_like_formatter
+    else:
+        raise ValueError(f"Invalid logging style: {style}. Use 'detailed' or 'print_like'.")
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    # Set console log level based on verbosity or user preference
+    if verbose:
+        console_handler.setLevel(logging.DEBUG)  # Force all logs to show in the console
+    elif console_level:
+        console_handler.setLevel(console_level)  # User-defined console level
+    else:
+        console_handler.setLevel(level)  # Default to global level
+
+    logger.addHandler(console_handler)
+
+    # File handler
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(detailed_formatter)  # Always use detailed format for file logs
+        file_handler.setLevel(level)  # File logs follow the global level
+        logger.addHandler(file_handler)
+
+    logger.info(f"Logging setup complete. Style: {style}, Verbose: {verbose}.")
+    return logger
 
 def get_currency(ticker):
     """Fetch the currency of the given ticker using yfinance."""
@@ -724,3 +794,5 @@ def update_portfolio(portfolio_dict):
         exclude_ticker=portfolio_dict["exclude_ticker"]
     )
     return result
+
+

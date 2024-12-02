@@ -7,3 +7,4 @@ build/
 .vscode/
 .env
 tests/test_amc.py
+*log
