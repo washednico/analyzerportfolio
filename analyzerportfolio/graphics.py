@@ -8,106 +8,165 @@ from arch import arch_model
 from scipy.stats import norm
 from typing import Union, List, Dict
 import yfinance as yf
+from .logger import logger
 
 # Set plotly template
 pio.templates.default = "plotly_dark"
 
 
+
 def portfolio_value(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
-    market_color: str = 'green'
+    market_color: str = 'green',
+    plot: bool = True
 ) -> pd.DataFrame:
     """
     Compare the portfolio(s) return with the market's return and plot the comparison.
     If multiple portfolios are passed, it will use market values from the first portfolio.
 
-    Parameters:
-    - portfolios (dict or list of dict): Portfolio dictionary or list of portfolio dictionaries
-      created from the create_portfolio function.
-    - colors (str or list[str], optional): Color or list of colors for each portfolio plot line.
-    - market_color (str, optional): Color for the market plot line (default is 'green').
+    Parameters
+    ----------
+    portfolios : dict or list of dict
+        Portfolio dictionary or list of portfolio dictionaries created from the `create_portfolio` function.
+    colors : str or list of str, optional
+        Color or list of colors for each portfolio plot line.
+        If not provided, Plotly's default colors will be used.
+    market_color : str, optional
+        Color for the market plot line. Defaults to 'green'.
+    plot : bool, optional
+        Whether to display the plot. Defaults to True.
 
-    Returns:
-    - pd.DataFrame: A DataFrame with the cumulative values of the portfolio(s) and the market index.
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing the aligned portfolio and market values for comparison.
+
+    Raises
+    ------
+    ValueError
+        If the length of `colors` does not match the number of portfolios.
+    TypeError
+        If `colors` is not a string or a list of strings.
+
+    Notes
+    -----
+    - All time series (portfolio and market values) are aligned by their dates. Rows with missing
+      values are dropped to ensure consistency in comparison and plotting.
+    - If plotting is enabled (`plot=True`), an interactive Plotly chart is displayed showing the
+      performance of each portfolio and the market.
+    - If `colors` are not specified, Plotly's default color palette will be used for the portfolios.
+
+    Examples
+    --------
+    >>> portfolio1 = {
+    ...     'name': 'Tech Portfolio',
+    ...     'portfolio_value': pd.Series([100, 110, 120], index=['2021-01-01', '2021-01-02', '2021-01-03']),
+    ...     'market_value': pd.Series([95, 100, 110], index=['2021-01-01', '2021-01-02', '2021-01-03']),
+    ...     'market_ticker': 'S&P 500'
+    ... }
+    >>> portfolio_value(portfolio1)
+                S&P 500  Tech Portfolio
+    2021-01-01     95.0           100.0
+    2021-01-02    100.0           110.0
+    2021-01-03    110.0           120.0
+
     """
-    # Ensure portfolios is a list
+
+    # Create a list in case of multiple portofolios 
     if isinstance(portfolios, dict):
         portfolios = [portfolios]
+        logger.debug("Converted portfolios to a list")
 
-    # Ensure colors is a list
+    # Ensure 'colors' is a list
     if colors is None:
         colors = [None] * len(portfolios)
+        logger.debug("No colors provided; using default colors")
     elif isinstance(colors, str):
         colors = [colors]
+        logger.debug("Single color provided; converted to list")
     elif isinstance(colors, list):
         if len(colors) != len(portfolios):
+            logger.error("Length of 'colors' does not match number of portfolios")
             raise ValueError("The length of 'colors' must match the number of portfolios.")
     else:
-        raise ValueError("Invalid type for 'colors' parameter.")
+        logger.error("Invalid type for 'colors' parameter")
+        raise TypeError("Invalid type for 'colors' parameter.")
 
-    # Initialize an empty DataFrame to hold cumulative values
+
+    # Initialize the comparison DataFrame and plotly figure
     cumulative_values = pd.DataFrame()
+    fig = go.Figure() if plot is True else None
 
-    # Create a Plotly figure
-    fig = go.Figure()
+    # Initialize portfolio colors dictionary
+    portfolio_colors = {}
+    colors_provided = colors is not None and len(colors) == len(portfolios)
 
-    # Check if portfolios are passed
-    if len(portfolios) > 0:
-        # Extract market values from the first portfolio if available
+    # Process market data
+    if portfolios:
         market_values = portfolios[0].get('market_value', None)
         market_name = portfolios[0].get('market_ticker', 'Market')
 
         if market_values is not None:
-            # Ensure the index is datetime
             market_values.index = pd.to_datetime(market_values.index)
-
-            # Add market values to cumulative_values DataFrame
             cumulative_values[market_name] = market_values
+            logger.debug(f"Added market data '{market_name}' to cumulative values.")
+        else:
+            logger.warning("Market data not provided or invalid.")
 
-            # Add market trace to the figure
-            fig.add_trace(go.Scatter(
-                x=market_values.index,
-                y=market_values,
-                mode='lines',
-                name=market_name,
-                line=dict(color=market_color, width=2)
-            ))
+    # Iterate over portfolios
+    for idx, portfolio in enumerate(portfolios):
+        name = portfolio.get('name', 'Unnamed Portfolio')
+        portfolio_values = portfolio.get('portfolio_value')
 
-    # Iterate over each portfolio and corresponding color
-    for portfolio, color in zip(portfolios, colors):
-        # Extract portfolio values and name
-        portfolio_values = portfolio['portfolio_value']
-        name = portfolio['name']
+        if portfolio_values is None:
+            logger.warning(f"Portfolio '{name}' has no 'portfolio_value' key.")
+            continue
 
-        # Ensure the index is datetime
+        # Add portfolio values to DataFrame
         portfolio_values.index = pd.to_datetime(portfolio_values.index)
-
-        # Add the portfolio values to the cumulative_values DataFrame
         cumulative_values[name] = portfolio_values
+        logger.debug(f"Added portfolio '{name}' values to cumulative DataFrame.")
 
-        # Add a trace to the figure with the specified color
-        fig.add_trace(go.Scatter(
-            x=portfolio_values.index,
-            y=portfolio_values,
-            mode='lines',
-            name=name,
-            line=dict(color=color) if color else {}
-        ))
+        # Store color if provided
+        if colors_provided:
+            portfolio_colors[name] = colors[idx]
 
-    # Align all series by their dates
+    # Align all series by dates
     cumulative_values = cumulative_values.dropna()
+    logger.debug("Aligned all data by dropping rows with missing values.")
 
-    # Update figure layout
-    fig.update_layout(
-        title="Portfolio(s) vs Market Performance",
-        xaxis_title="Date",
-        yaxis_title="Portfolio Value",
-        template="plotly_dark"
-    )
+    # Process the figure
+    if fig:
+        for name in cumulative_values.columns:
+            aligned_values = cumulative_values[name]
 
-    # Display the plot
-    fig.show()
+            # Retrieve the color for the current portfolio if provided
+            current_color = portfolio_colors.get(name)
+
+            # Define line properties
+            if name != 'Market':
+                line_props = dict(color=current_color) if current_color else {}
+            else:
+                line_props = dict(color=market_color, width=2)
+
+            fig.add_trace(go.Scatter(
+                x=aligned_values.index,
+                y=aligned_values,
+                mode='lines',
+                name=name,
+                line=line_props
+            ))
+            logger.debug(f"Added aligned trace for '{name}' to the plot with color '{current_color}'.")
+
+        fig.update_layout(
+            title="Portfolio(s) vs Market Performance",
+            xaxis_title="Date",
+            yaxis_title="Portfolio Value",
+            template="plotly_dark"
+        )
+
+        return cumulative_values
 
     return cumulative_values
 
@@ -115,158 +174,196 @@ def garch(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
     market_color: str = 'green',
-    plot: bool = True,
-    plot_difference: bool = False
+    plot: bool = True
 ) -> pd.DataFrame:
     """
-    Compare the GARCH volatilities of one or multiple portfolios and plot the comparison.
-    If multiple portfolios are passed, it will use market values from the first portfolio.
+    Compare the GARCH volatilities of one or multiple portfolios and optionally plot the comparison.
+    If multiple portfolios are passed, it will use market returns from the first portfolio.
 
-    Parameters:
-    - portfolios (dict or list of dict): Portfolio dictionary or list of portfolio dictionaries
-      created from the create_portfolio function.
-    - colors (str or list[str], optional): Color or list of colors for each portfolio plot line.
-    - market_color (str, optional): Color for the market volatility plot line (default is 'green').
-    - plot (bool, optional): Whether to plot the results (default is True).
+    Parameters
+    ----------
+    portfolios : dict or list of dict
+        Portfolio dictionary or list of portfolio dictionaries. Each dictionary must include:
+        - 'name': str, Name of the portfolio.
+        - 'portfolio_returns': pandas.Series, Time series of portfolio returns indexed by date.
+        - 'market_returns' (optional): pandas.Series, Time series of market returns for comparison (used from the first portfolio).
+        - 'market_ticker' (optional): str, Name of the market, used for labeling in the plot.
+    colors : str or list of str, optional
+        Color or list of colors for each portfolio plot line. If not provided, default colors will be used.
+    market_color : str, optional
+        Color for the market volatility plot line. Defaults to 'green'.
+    plot : bool, optional
+        Whether to display the plot. Defaults to True.
 
-    Returns:
-    - pd.DataFrame: A DataFrame with the GARCH volatilities of all portfolios (divided by 100).
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing the GARCH volatilities of all portfolios (divided by 100), indexed by date.
+
+    Raises
+    ------
+    ValueError
+        If the length of `colors` does not match the number of portfolios.
+    TypeError
+        If `colors` is not a string or a list of strings.
+    ValueError
+        If market returns are not provided in the first portfolio.
+    Exception
+        If GARCH model fitting fails for a portfolio or the market.
+
+    Notes
+    -----
+    - This function applies a GARCH(1,1) model to the time series of portfolio and market returns.
+    - The first portfolio is used as the reference for market returns.
+    - Infinite and NaN values are removed from the data before processing.
+    - If `plot` is True, a Plotly figure comparing GARCH volatilities is displayed.
+    - The returned DataFrame (`garch_df`) contains one column for each portfolio and the market, labeled by their names.
+
+    Example
+    -------
+    >>> portfolios = [
+    ...     {'name': 'Portfolio A', 'portfolio_returns': pd.Series([...]), 'market_returns': pd.Series([...])},
+    ...     {'name': 'Portfolio B', 'portfolio_returns': pd.Series([...])}
+    ... ]
+    >>> garch_df = garch(portfolios, colors=['blue', 'red'], market_color='green', plot=True)
+    >>> print(garch_df)
     """
-    # Ensure portfolios is a list
+    # Create a list in case of multiple portofolios 
     if isinstance(portfolios, dict):
         portfolios = [portfolios]
+        logger.debug("Converted portfolios to a list")
 
-    # Ensure colors is a list
+    # Ensure 'colors' is a list
     if colors is None:
         colors = [None] * len(portfolios)
+        logger.debug("No colors provided; using default colors")
     elif isinstance(colors, str):
         colors = [colors]
+        logger.debug("Single color provided; converted to list")
     elif isinstance(colors, list):
         if len(colors) != len(portfolios):
+            logger.error("Length of 'colors' does not match number of portfolios")
             raise ValueError("The length of 'colors' must match the number of portfolios.")
     else:
-        raise ValueError("Invalid type for 'colors' parameter.")
+        logger.error("Invalid type for 'colors' parameter")
+        raise TypeError("Invalid type for 'colors' parameter.")
 
-    # Initialize an empty DataFrame to hold volatilities
-    volatility_df = pd.DataFrame()
 
-    # Create a Plotly figure
-    fig = go.Figure()
+    # Initialize the volatility DataFrame and figure
+    garch_df = pd.DataFrame()
+    fig = go.Figure() if plot else None
 
-    # Check if portfolios are passed
-    if len(portfolios) > 0:
+    # Initialize portfolio colors dictionary
+    portfolio_colors = {}
+    colors_provided = colors is not None and len(colors) == len(portfolios)
+
+    # Proceed if portfolios are provided
+    if portfolios:
+
         # Extract market returns from the first portfolio if available
         market_returns = portfolios[0].get('market_returns', None)
         market_name = portfolios[0].get('market_ticker', 'Market')
 
-        if market_returns is not None:
-            # Clean market_returns
-            market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna()
+        if market_returns is None:
+            logger.warning("Market returns not provided in the first portfolio.")
+            raise ValueError("Market returns not provided in the first portfolio.")
 
-            # Ensure market_returns is a Pandas Series
-            if isinstance(market_returns, pd.DataFrame):
-                market_returns = market_returns.squeeze()
+        if isinstance(market_returns, pd.DataFrame):
+            market_returns = market_returns.squeeze()
+            logger.debug("Converted market_returns from DataFrame to Series.")
+
+        # Clean market_returns
+        market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna().sort_index()
+        logger.debug(f"Processed 'market_returns' for '{market_name}'.")
+
+        if not market_returns.empty:
+            # Fit GARCH model 
+            try:
+                m_model = arch_model(market_returns * 100, vol='Garch', p=1, q=1, rescale=False)
+                m_model_fit = m_model.fit(disp='off')
+                market_volatility = m_model_fit.conditional_volatility / 100
+                garch_df[market_name] = market_volatility
+                logger.info(f"Fitted GARCH model for market '{market_name}'.")
+            except Exception as e:
+                logger.error(f"GARCH model failed for market '{market_name}': {e}")
+        else:
+            logger.warning(f"Market returns for '{market_name}' are empty after cleaning.")
+
+
+        # Iterate over each portfolio
+        for idx, portfolio in enumerate(portfolios):
+            name = portfolio.get('name', f'Portfolio {idx + 1}')
+            portfolio_returns = portfolio.get('portfolio_returns', None)
+
+            if portfolio_returns is None:
+                logger.warning(f"Portfolio '{name}' has no 'portfolio_returns' key.")
+                continue
+
+            # Clean portfolio_returns
+            portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
+            logger.debug(f"Cleaned 'portfolio_returns' for '{name}'.")
 
             # Sort the index to ensure proper alignment
-            market_returns = market_returns.sort_index()
+            portfolio_returns = portfolio_returns.sort_index()
+            logger.debug(f"Sorted 'portfolio_returns' for '{name}'.")
 
             # Multiply returns by 100 to convert to percentage
-            market_returns_pct = market_returns * 100
+            portfolio_returns_pct = portfolio_returns * 100
+            logger.debug(f"Converted 'portfolio_returns' to percentage for '{name}'.")
 
-            # Fit a GARCH(1,1) model to the market returns
-            m_model = arch_model(market_returns_pct, vol='Garch', p=1, q=1, rescale=False)
-            m_model_fit = m_model.fit(disp='off')
+            # Fit a GARCH(1,1) model to the portfolio returns
+            try:
+                model = arch_model(portfolio_returns_pct, vol='Garch', p=1, q=1, rescale=False)
+                model_fit = model.fit(disp='off')
+                logger.debug(f"Fitted GARCH(1,1) model for '{name}'.")
+            except Exception as e:
+                logger.error(f"Failed to fit GARCH model for '{name}': {e}")
+                continue
 
-            # Get the conditional volatility and divide by 100
-            m_forecasted_volatility = m_model_fit.conditional_volatility / 100
+            # Get the conditional volatility and divide by 100 to revert to original scale
+            forecasted_volatility = model_fit.conditional_volatility / 100
+            logger.debug(f"Computed forecasted volatility for '{name}'.")
 
-            # Add the market volatility series to the volatility_df DataFrame
-            volatility_df[market_name] = m_forecasted_volatility
+            # Add the volatility series to the garch_df DataFrame
+            garch_df[name] = forecasted_volatility
+            logger.debug(f"Added forecasted volatility for '{name}' to 'garch_df'.")
 
-            # Add market volatility trace
-            fig.add_trace(go.Scatter(
-                x=m_forecasted_volatility.index,
-                y=m_forecasted_volatility,
-                mode='lines',
-                name=market_name,
-                line=dict(color=market_color, width=2)
-            ))
+            # Store color if provided
+            if colors_provided:
+                portfolio_colors[name] = colors[idx]
+                logger.debug(f"Assigned color '{colors[idx]}' to portfolio '{name}'.")
 
-    # Iterate over each portfolio and corresponding color
-    for portfolio, color in zip(portfolios, colors):
-        # Extract portfolio returns and name
-        portfolio_returns = portfolio['portfolio_returns']
-        name = portfolio['name']
+        # Process the figure
+        if fig:
+            for name in garch_df.columns:
+                aligned_values = garch_df[name]
 
-        # Clean portfolio_returns
-        portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
-
-        # Ensure portfolio_returns is a Pandas Series
-        if isinstance(portfolio_returns, pd.DataFrame):
-            portfolio_returns = portfolio_returns.squeeze()
-
-        # Sort the index to ensure proper alignment
-        portfolio_returns = portfolio_returns.sort_index()
-
-        # Multiply returns by 100 to convert to percentage
-        portfolio_returns_pct = portfolio_returns * 100
-
-        # Fit a GARCH(1,1) model to the portfolio returns
-        model = arch_model(portfolio_returns_pct, vol='Garch', p=1, q=1, rescale=False)
-        model_fit = model.fit(disp='off')
-
-        # Get the conditional volatility and divide by 100
-        forecasted_volatility = model_fit.conditional_volatility / 100
-
-        # Add the volatility series to the volatility_df DataFrame
-        volatility_df[name] = forecasted_volatility
-
-        # Add a trace to the figure with the specified color
-        fig.add_trace(go.Scatter(
-            x=forecasted_volatility.index,
-            y=forecasted_volatility,
-            mode='lines',
-            name=name,
-            line=dict(color=color) if color else {}
-        ))
-
-        if plot_difference == True:
-                # Calculate the difference between portfolio and market GARCH volatilities
-            if market_returns is not None:
-                # Align the portfolio and market volatilities for the same date range
-                aligned_portfolio_vol, aligned_market_vol = forecasted_volatility.align(m_forecasted_volatility, join='inner')
-
-                # Calculate the volatility difference
-                vol_diff = aligned_portfolio_vol - aligned_market_vol
-
-                # Add the volatility difference series to the volatility_df DataFrame
-                volatility_df[f'{name} - {market_name}'] = vol_diff
-
-                # Add a trace for the volatility difference
+                # Add trace to the figure for each series
                 fig.add_trace(go.Scatter(
-                    x=vol_diff.index,
-                    y=vol_diff,
+                    x=aligned_values.index,
+                    y=aligned_values,
                     mode='lines',
-                    name=f'{name} - {market_name}',
-                    line=dict(dash='dash', color=color if color else 'gray')
+                    name=name,
+                    line=dict(
+                        color=portfolio_colors.get(name, market_color if name == 'Market' else None),
+                        width=2 if name == 'Market' else 1
+                    )
                 ))
+                logger.debug(f"Added aligned trace for '{name}' to the plot.")
 
-    # Align all series by their dates
-    volatility_df = volatility_df.dropna()
+            # Update layout for the entire figure
+            fig.update_layout(
+                title="Comparison of GARCH Volatilities",
+                xaxis_title="Date",
+                yaxis_title="Volatility",
+                template="plotly_dark"
+            )
 
-    # Update figure layout
-    fig.update_layout(
-        title="Comparison of GARCH Volatilities",
-        xaxis_title="Date",
-        yaxis_title="Volatility",
-        template="plotly_dark"
-    )
+            # Show the plot
+            fig.show()
+            logger.info("Displayed GARCH volatility comparison plot.")
 
-    # Display the plot
-    if plot:
-        fig.show()
-
-    return volatility_df
+    return garch_df
 
 def montecarlo(
     portfolios: Union[dict, List[dict]],

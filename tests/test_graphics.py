@@ -6,16 +6,33 @@ from analyzerportfolio.graphics import (
     heatmap,
     distribution_return,
     simulate_dca,
-    probability_cone
+    probability_cone,
+    pie_chart,
+    sector_pie,
+    country_pie,
     )
 
 from analyzerportfolio.utils import (
     download_data,
-    create_portfolio
+    create_portfolio,
+    configure_logging
+
 )
-if False:
+
+
+
+if True:
+
+    # User preferences for logging
+    #LOG_LEVEL = logging.DEBUG
+    #LOG_FILE = 'user_test_log.log'
+    #VERBOSE = True
+    # Setup logging
+    configure_logging()
+
     def test_everything():
         colors_1 = "orange" #OPTIONAL
+        colors_2 = ["orange", "blue"]
         colors_4 = ["orange","blue","purple","red"]  #OPTIONAL
 
         start_date = '2013-02-01'
@@ -44,26 +61,25 @@ if False:
         portfolio_4 = create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="2 ETF",base_currency=base_currency, rebalancing_period_days=250)
         
         portfolio_value(portfolio_1, colors=colors_1)
-        portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
         garch(portfolio_1, colors=colors_1)
-        garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+        # garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-        montecarlo(portfolio_1, simulation_length=1000)
-        montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
+        # montecarlo(portfolio_1, simulation_length=1000)
+        # montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
         
-        drawdown(portfolio_1, colors=colors_1)
-        drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+        # drawdown(portfolio_1, colors=colors_1)
+        # drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-        heatmap(portfolio_1)
+        # heatmap(portfolio_1)
 
-        distribution_return(portfolio_1, colors=colors_1)
-        distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+        # distribution_return(portfolio_1, colors=colors_1)
+        # distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-        simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
-        simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)
+        # simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
+        # simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)
 
-        probability_cone(portfolio_1, time_horizon=1000)
+        # probability_cone(portfolio_1, time_horizon=1000)
 
 
 
