@@ -35,3 +35,9 @@ from .ai import monitor_news
 
 from .optimization import optimize
 from .optimization import efficient_frontier
+
+from .config import set_plotly_template
+from .config import get_plotly_template
+from .config import reset_logging
+from .config import get_logger
+from .config import configure_logging
