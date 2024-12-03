@@ -1,3 +1,14 @@
+from analyzerportfolio.logger import logger
+from analyzerportfolio.config import get_plotly_template
+
+from analyzerportfolio.utils import(
+    align_series,
+    process_market,
+    prepare_portfolios_colors,
+    prepare_portfolios
+
+)
+
 from typing import Union, List, Dict
 import numpy as np
 import pandas as pd
@@ -7,23 +18,12 @@ import plotly.express as px
 from arch import arch_model
 from scipy.stats import norm
 import yfinance as yf
-from .logger import logger
-
-from analyzerportfolio.utils import(
-    align_series,
-    process_market,
-    prepare_portfolios_colors,
-    prepare_portfolios,
-    set_plotly_template
-
-)
 
 def portfolio_value(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
     market_color: str = 'green',
     plot: bool = True,
-    plot_template: str = "plotly_dark",
     should_align: bool = True,
 ) -> pd.DataFrame:
     """
@@ -41,9 +41,6 @@ def portfolio_value(
         Color for the market plot line. Defaults to 'green'.
     plot : bool, optional
         Whether to display the plot. Defaults to True.
-    plot_template : str, optional
-        Plotly template for the chart. Defaults to "plotly_dark".
-
         
     Returns
     -------
@@ -135,7 +132,7 @@ def portfolio_value(
             title="Portfolio(s) vs Market Performance",
             xaxis_title="Date",
             yaxis_title="Portfolio Value",
-            template=plot_template
+            template=get_plotly_template()
         )
 
         # Show the plot
@@ -314,7 +311,7 @@ def garch(
             title="Comparison of GARCH Volatilities",
             xaxis_title="Date",
             yaxis_title="Volatility",
-            template="plotly_dark"
+            template=get_plotly_template()
         )
 
         # Show the plot
@@ -343,8 +340,7 @@ def montecarlo(
         Number of Monte Carlo simulations to run for each portfolio (default is 100).
     plot : bool, optional
         Whether to plot the simulation results (default is True).
-    plot_template : str, optional
-        The Plotly template to use for plotting (default is "plotly_white").
+
 
     Returns
     -------
@@ -416,8 +412,7 @@ def montecarlo(
     # If should be plot
     if plot:
         fig = go.Figure()                       
-        set_plotly_template(plot[1])          # Set the template (default: plotly_dark)
-
+         # Set the template (default: plotly_dark)
         num_plots = len(simulation_results)
         num_cols = 2
         num_rows = -(-num_plots // num_cols)  
@@ -440,7 +435,10 @@ def montecarlo(
                                xref=f"{xref} domain", yref=f"{yref} domain", x=0.1, y=1.05, showarrow=False, row=row, col=col)
             
 
-        fig.update_layout(title_text="Monte Carlo Simulations - Simulation length: "+str(simulation_length)+" (Days x Step: "+str(days_per_step)+") - Simuluations per portfolio: "+str(num_simulations), template="plotly_dark")
+        fig.update_layout(
+            title_text="Monte Carlo Simulations - Simulation length: "+str(simulation_length)+" (Days x Step: "+str(days_per_step)+") - Simuluations per portfolio: "+str(num_simulations), 
+            template=get_plotly_template()
+            )
         fig.show()
         logger.info("Displayed Montecarlo comparison plot.")
 
@@ -559,7 +557,7 @@ def drawdown(
             title="Portfolio Drawdown Comparison",
             xaxis_title="Date",
             yaxis_title="Drawdown (%)",
-            template="plotly_dark"
+            template=get_plotly_template()
         )
 
         fig.show()
@@ -608,7 +606,7 @@ def heatmap(
 
     Notes:
     -----
-    - If `disassemble` is True, the correlation analysis is performed at the asset level.
+- If `disassemble` is True, the correlation analysis is performed at the asset level.
     - If `disassemble` is False, the correlation analysis is based on overall portfolio returns.
     - The market return series, if provided, is included in the correlation analysis.
     - The heatmap is visualized using Plotly if `plot=True`.
@@ -662,12 +660,12 @@ def heatmap(
     # Calculate the correlation matrix
     corr_matrix = combined_returns.corr()
 
-    # Plot the heatmap if plot is True
+    # Set plot layout and plot the result
     if plot:
         fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
         fig.update_layout(
-            title_text="Heatmap of Portfolio Correlations" if not disassemble else "Heatmap of Asset Correlations"
-        )
+            title_text="Heatmap of Portfolio Correlations" if not disassemble else "Heatmap of Asset Correlations",
+            template = get_plotly_template())
         fig.show()
 
     return combined_returns
@@ -676,8 +674,7 @@ def pie_chart(
         portfolios: Union[dict, List[dict]], 
         colors: Union[str, List[str]] = None, 
         plot: bool = True,
-        threshold: float = 0.001,
-        transparent: bool = False):
+        threshold: float = 0.001):
     """
     Plot a pie chart to visualize the asset allocation of an ETF-based investment strategy for one or multiple portfolios.
 
@@ -701,8 +698,6 @@ def pie_chart(
     threshold : float, optional
         The allocation threshold below which allocations are grouped into an "All Others" category. Default is 0.001.
 
-    transparent : bool, optional
-        If True, sets the chart's background to transparent. Default is False.
 
     Returns:
     -------
@@ -762,12 +757,8 @@ def pie_chart(
                 title_font_size=20,
                 paper_bgcolor='black',  # Set background color to black
                 font_color='white',     # Set text color to white
+                template = get_plotly_template()
             )
-
-            # Display the pie chart
-            if transparent:
-                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                logger.info(f"Enabled transparent background for portfolio '{name}' pie chart.")
             
             fig.show()
             logger.info(f"Displayed pie chart for portfolio '{name}'.")
@@ -776,8 +767,7 @@ def sector_pie(
         portfolios: Union[dict, List[dict]], 
         colors: Union[str, List[str]] = None, 
         plot: bool = True,
-        threshold: float = 0.001,
-        transparent: bool = False
+        threshold: float = 0.001
         ) -> pd.DataFrame :
     """
     Generate a sector distribution pie chart based on equity portfolios and return a DataFrame of sector weights.
@@ -792,8 +782,6 @@ def sector_pie(
         Whether to display the plot. Defaults to True.
     threshold : float, optional
         Minimum allocation for a sector to be displayed separately. Defaults to 0.001.
-    transparent : bool, optional
-        Whether the plot background should be transparent. Defaults to False.
 
     Returns:
     -------
@@ -861,8 +849,8 @@ def sector_pie(
 
             fig.update_layout(
                 title_text=f"Sector Distribution: {portfolio_name}",
-                paper_bgcolor='rgba(0,0,0,0)' if transparent else 'white',
-                font_color='black',
+                template = get_plotly_template(),
+                font_color='black'
             )
             fig.show()
             logger.info(f"Displayed pie chart for portfolio: {portfolio_name}")
@@ -876,8 +864,7 @@ def country_pie(
         portfolios: Union[dict, List[dict]], 
         colors: Union[str, List[str]] = None, 
         plot: bool = True,
-        threshold: float = 0.001,
-        transparent: bool = False
+        threshold: float = 0.001
         ) -> pd.DataFrame:
     """
     Generate a geographical distribution pie chart based on equity portfolios and return a DataFrame of country weights.
@@ -892,8 +879,6 @@ def country_pie(
         Whether to display the plot. Defaults to True.
     threshold : float, optional
         Minimum allocation for a country to be displayed separately. Defaults to 0.001.
-    transparent : bool, optional
-        Whether the plot background should be transparent. Defaults to False.
 
     Returns:
     -------
@@ -961,8 +946,8 @@ def country_pie(
 
             fig.update_layout(
                 title_text=f"Geographical Distribution: {portfolio_name}",
-                paper_bgcolor='rgba(0,0,0,0)' if transparent else 'white',
                 font_color='black',
+                template = get_plotly_template(),
             )
             fig.show()
             logger.info(f"Displayed pie chart for portfolio: {portfolio_name}")
@@ -1015,28 +1000,37 @@ def distribution_return(
     portfolios, colors = prepare_portfolios_colors(portfolios, colors)
     logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
 
-    # Initialize data list and plotly figure if needed
-    fig = go.Figure() if plot is True else None
-    histogram_data = []
-    
-    days_per_step = portfolios[0]["return_period_days"]
+    # Initialize DataFrame for histogram data and optional plot
+    combined_histogram_data = []
+    fig = go.Figure() if plot else None
+
+    # Extract market details if present in the first portfolio
+    days_per_step = portfolios[0].get("return_period_days", 1)
     market_returns = portfolios[0].get('market_returns', None)
     market_name = portfolios[0].get('market_ticker', 'Market')
 
+    # Process each portfolio
     for portfolio, color in zip(portfolios, colors):
-        portfolio_name = portfolio['name']
-        portfolio_returns = portfolio['portfolio_returns']
+        portfolio_name = portfolio.get('name', 'Unnamed Portfolio')
+        portfolio_returns = portfolio.get('portfolio_returns')
+
+        if portfolio_returns is None:
+            logger.warning(f"Portfolio '{portfolio_name}' has no 'portfolio_returns' key.")
+            continue
+
+        # Ensure portfolio_returns is a pandas Series
+        portfolio_returns = pd.Series(portfolio_returns).dropna()
 
         # Calculate histogram data
         hist, bin_edges = np.histogram(portfolio_returns, bins=bins, density=True)
-        histogram_data.append(pd.DataFrame({
+        combined_histogram_data.append(pd.DataFrame({
             'Portfolio': portfolio_name,
             'BinEdges': bin_edges[:-1],  # Exclude the last bin edge
             'Density': hist
         }))
 
         # Add portfolio histogram to the plot
-        if fig:
+        if plot:
             fig.add_trace(go.Histogram(
                 x=portfolio_returns,
                 nbinsx=bins,
@@ -1045,20 +1039,21 @@ def distribution_return(
                     color=color,
                     line=dict(color='black', width=1)
                 ),
-                opacity=1.0,
+                opacity=0.75,
                 name=portfolio_name
             ))
 
-    # Add market histogram to the plot if market returns are provided
+    # Add market histogram if market returns are provided
     if market_returns is not None:
+        market_returns = pd.Series(market_returns).dropna()
         hist, bin_edges = np.histogram(market_returns, bins=bins, density=True)
-        histogram_data.append(pd.DataFrame({
+        combined_histogram_data.append(pd.DataFrame({
             'Portfolio': market_name,
             'BinEdges': bin_edges[:-1],
             'Density': hist
         }))
 
-        if fig:
+        if plot:
             fig.add_trace(go.Histogram(
                 x=market_returns,
                 nbinsx=bins,
@@ -1067,18 +1062,18 @@ def distribution_return(
                     color=market_color,
                     line=dict(color='black', width=1)
                 ),
-                opacity=1.0,
+                opacity=0.75,
                 name=market_name
             ))
 
-    # Combine histogram data into a single DataFrame
-    combined_histogram_data = pd.concat(histogram_data, ignore_index=True)
+    # Combine all histogram data into a single DataFrame
+    combined_histogram_data = pd.concat(combined_histogram_data, ignore_index=True)
 
     # Update layout for the plot
-    if fig:
+    if plot:
         fig.update_layout(
             title="Distribution of Portfolio Returns",
-            template="plotly_dark",
+            template=get_plotly_template(),
             xaxis=dict(
                 title=f"{days_per_step}-Day Returns",
                 tickformat='.2%',
@@ -1091,6 +1086,10 @@ def distribution_return(
         fig.show()
 
     return combined_histogram_data
+
+
+
+# To check 
 
 def simulate_dca(
     portfolios: Union[dict, List[dict]],

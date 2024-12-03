@@ -14,9 +14,14 @@ from analyzerportfolio.graphics import (
 
 from analyzerportfolio.utils import (
     download_data,
-    create_portfolio,
-    configure_logging
+    create_portfolio
 
+)
+
+from analyzerportfolio.config import (
+    set_plotly_template,
+    get_plotly_template,
+    configure_logging
 )
 
 
@@ -65,16 +70,16 @@ if True:
         garch(portfolio_1, colors=colors_1)
         # garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-        # montecarlo(portfolio_1, simulation_length=1000)
+        montecarlo(portfolio_1, simulation_length=1000)
         # montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
         
-        # drawdown(portfolio_1, colors=colors_1)
+        drawdown(portfolio_1, colors=colors_1)
         # drawdown([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
-        # heatmap(portfolio_1)
+        heatmap(portfolio_1)
 
-        # distribution_return(portfolio_1, colors=colors_1)
-        # distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+        distribution_return(portfolio_1, colors=colors_1)
+        distribution_return([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
         # simulate_dca(portfolio_1, initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_1)
         # simulate_dca([portfolio_1,portfolio_2,portfolio_3,portfolio_4], initial_investment=10000, periodic_investment=500, investment_interval=30, colors=colors_4)

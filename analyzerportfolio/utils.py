@@ -10,7 +10,6 @@ import logging
 from .logger import logger 
 import os
 from typing import Union, List, Dict, Tuple
-import plotly.io as pio
 
 def configure_logging(level=logging.INFO, log_file=None, console_level=None, verbose=False, style="detailed"):
     """
@@ -799,28 +798,6 @@ def update_portfolio(portfolio_dict):
 
 
 ## - Graphics utility functions -- ##
-
-
-def set_plotly_template(
-        template: str = "plotly_dark") -> None:
-    """
-    Set the default Plotly template for visualizations.
-
-    Parameters
-    ----------
-    template : str, optional
-        The name of the Plotly template to set as default. Default is "plotly_dark".
-
-    Returns
-    -------
-    None
-    """
-    try:
-        pio.templates.default = template
-        logger.info(f"Plotly template set to '{template}'.")
-    except ValueError as e:
-        logger.error(f"Invalid template name '{template}': {e}")
-        raise ValueError(f"Invalid template name '{template}'. Check available Plotly templates.") from e
 
 def prepare_portfolios(portfolios: Union[dict, List[dict]]) -> List[dict]:
     """
