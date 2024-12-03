@@ -1,25 +1,30 @@
+from typing import Union, List, Dict
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import plotly.express as px
-import plotly.io as pio
 from arch import arch_model
 from scipy.stats import norm
-from typing import Union, List, Dict
 import yfinance as yf
 from .logger import logger
 
-# Set plotly template
-pio.templates.default = "plotly_dark"
+from analyzerportfolio.utils import(
+    align_series,
+    process_market,
+    prepare_portfolios_colors,
+    prepare_portfolios,
+    set_plotly_template
 
-
+)
 
 def portfolio_value(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
     market_color: str = 'green',
-    plot: bool = True
+    plot: bool = True,
+    plot_template: str = "plotly_dark",
+    should_align: bool = True,
 ) -> pd.DataFrame:
     """
     Compare the portfolio(s) return with the market's return and plot the comparison.
@@ -28,7 +33,7 @@ def portfolio_value(
     Parameters
     ----------
     portfolios : dict or list of dict
-        Portfolio dictionary or list of portfolio dictionaries created from the `create_portfolio` function.
+        Portfolio dictionary or list of portfolio dictionaries.
     colors : str or list of str, optional
         Color or list of colors for each portfolio plot line.
         If not provided, Plotly's default colors will be used.
@@ -36,18 +41,14 @@ def portfolio_value(
         Color for the market plot line. Defaults to 'green'.
     plot : bool, optional
         Whether to display the plot. Defaults to True.
+    plot_template : str, optional
+        Plotly template for the chart. Defaults to "plotly_dark".
 
+        
     Returns
     -------
     pandas.DataFrame
         A DataFrame containing the aligned portfolio and market values for comparison.
-
-    Raises
-    ------
-    ValueError
-        If the length of `colors` does not match the number of portfolios.
-    TypeError
-        If `colors` is not a string or a list of strings.
 
     Notes
     -----
@@ -73,46 +74,22 @@ def portfolio_value(
 
     """
 
-    # Create a list in case of multiple portofolios 
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
-        logger.debug("Converted portfolios to a list")
-
-    # Ensure 'colors' is a list
-    if colors is None:
-        colors = [None] * len(portfolios)
-        logger.debug("No colors provided; using default colors")
-    elif isinstance(colors, str):
-        colors = [colors]
-        logger.debug("Single color provided; converted to list")
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            logger.error("Length of 'colors' does not match number of portfolios")
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
-    else:
-        logger.error("Invalid type for 'colors' parameter")
-        raise TypeError("Invalid type for 'colors' parameter.")
-
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
 
     # Initialize the comparison DataFrame and plotly figure
     cumulative_values = pd.DataFrame()
     fig = go.Figure() if plot is True else None
 
-    # Initialize portfolio colors dictionary
-    portfolio_colors = {}
-    colors_provided = colors is not None and len(colors) == len(portfolios)
+    # Map portfolios to colors
+    portfolio_colors = {portfolio['name']: color for portfolio, color in zip(portfolios, colors)}
 
-    # Process market data
-    if portfolios:
-        market_values = portfolios[0].get('market_value', None)
-        market_name = portfolios[0].get('market_ticker', 'Market')
+    # Process market values 
+    market_values, market_name = process_market(portfolios)
+    cumulative_values[market_name] = market_values
+    logger.debug(f"Added market data '{market_name}' to cumulative values.")
 
-        if market_values is not None:
-            market_values.index = pd.to_datetime(market_values.index)
-            cumulative_values[market_name] = market_values
-            logger.debug(f"Added market data '{market_name}' to cumulative values.")
-        else:
-            logger.warning("Market data not provided or invalid.")
 
     # Iterate over portfolios
     for idx, portfolio in enumerate(portfolios):
@@ -128,28 +105,22 @@ def portfolio_value(
         cumulative_values[name] = portfolio_values
         logger.debug(f"Added portfolio '{name}' values to cumulative DataFrame.")
 
-        # Store color if provided
-        if colors_provided:
-            portfolio_colors[name] = colors[idx]
+    # Align all series if needed
+    if should_align:
+        cumulative_values = align_series(cumulative_values)
 
-    # Align all series by dates
-    cumulative_values = cumulative_values.dropna()
-    logger.debug("Aligned all data by dropping rows with missing values.")
-
-    # Process the figure
-    if fig:
+    # Plot if enabled
+    if plot:
         for name in cumulative_values.columns:
             aligned_values = cumulative_values[name]
 
-            # Retrieve the color for the current portfolio if provided
-            current_color = portfolio_colors.get(name)
+            # Retrieve the color for the current portfolio or use default
+            current_color = portfolio_colors.get(name) if name != market_name else market_color
 
             # Define line properties
-            if name != 'Market':
-                line_props = dict(color=current_color) if current_color else {}
-            else:
-                line_props = dict(color=market_color, width=2)
+            line_props = dict(color=current_color, width=2) if name == market_name else dict(color=current_color)
 
+            # Add trace to the plot
             fig.add_trace(go.Scatter(
                 x=aligned_values.index,
                 y=aligned_values,
@@ -159,22 +130,27 @@ def portfolio_value(
             ))
             logger.debug(f"Added aligned trace for '{name}' to the plot with color '{current_color}'.")
 
+        # Update the layout of the plot
         fig.update_layout(
             title="Portfolio(s) vs Market Performance",
             xaxis_title="Date",
             yaxis_title="Portfolio Value",
-            template="plotly_dark"
+            template=plot_template
         )
 
-        return cumulative_values
+        # Show the plot
+        fig.show()
+        logger.debug("Displayed portfolio vs market performance plot.")
 
+    # Always return the cumulative_values DataFrame
     return cumulative_values
 
 def garch(
     portfolios: Union[dict, List[dict]],
     colors: Union[str, List[str]] = None,
     market_color: str = 'green',
-    plot: bool = True
+    plot: bool = True,
+    should_align: bool = True
 ) -> pd.DataFrame:
     """
     Compare the GARCH volatilities of one or multiple portfolios and optionally plot the comparison.
@@ -227,187 +203,183 @@ def garch(
     ... ]
     >>> garch_df = garch(portfolios, colors=['blue', 'red'], market_color='green', plot=True)
     >>> print(garch_df)
+
     """
-    # Create a list in case of multiple portofolios 
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
-        logger.debug("Converted portfolios to a list")
 
-    # Ensure 'colors' is a list
-    if colors is None:
-        colors = [None] * len(portfolios)
-        logger.debug("No colors provided; using default colors")
-    elif isinstance(colors, str):
-        colors = [colors]
-        logger.debug("Single color provided; converted to list")
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            logger.error("Length of 'colors' does not match number of portfolios")
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
-    else:
-        logger.error("Invalid type for 'colors' parameter")
-        raise TypeError("Invalid type for 'colors' parameter.")
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for GARCH simulation.")
 
-
-    # Initialize the volatility DataFrame and figure
+    # Initialize the comparison DataFrame and plotly figure
     garch_df = pd.DataFrame()
-    fig = go.Figure() if plot else None
+    fig = go.Figure() if plot is True else None
 
-    # Initialize portfolio colors dictionary
-    portfolio_colors = {}
-    colors_provided = colors is not None and len(colors) == len(portfolios)
+    # Map portfolios to colors
+    portfolio_colors = {portfolio['name']: color for portfolio, color in zip(portfolios, colors)}
 
-    # Proceed if portfolios are provided
-    if portfolios:
+    # Process market values 
+    market_returns, market_name = process_market(portfolios, type="returns")
+    garch_df[market_name] = market_returns
+    # Clean market_returns
+    market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna().sort_index()
+    logger.debug(f"Processed 'market_returns' for '{market_name}'.")
 
-        # Extract market returns from the first portfolio if available
-        market_returns = portfolios[0].get('market_returns', None)
-        market_name = portfolios[0].get('market_ticker', 'Market')
+    # Fit a GARCH(1,1) model to the market returns
+    if not market_returns.empty:
+        try:
+            m_model = arch_model(market_returns * 100, vol='Garch', p=1, q=1, rescale=False)
+            m_model_fit = m_model.fit(disp='off')
+            market_volatility = m_model_fit.conditional_volatility / 100
+            garch_df[market_name] = market_volatility
+            logger.info(f"Fitted GARCH model for market '{market_name}'.")
+        except Exception as e:
+            logger.error(f"GARCH model failed for market '{market_name}': {e}")
 
-        if market_returns is None:
-            logger.warning("Market returns not provided in the first portfolio.")
-            raise ValueError("Market returns not provided in the first portfolio.")
+    else:
+        logger.warning(f"Market returns for '{market_name}' are empty after cleaning.")
+        raise ValueError(f"Market returns for '{market_name}' are empty after cleaning.")
 
-        if isinstance(market_returns, pd.DataFrame):
-            market_returns = market_returns.squeeze()
-            logger.debug("Converted market_returns from DataFrame to Series.")
+    # Iterate over each portfolio
+    for idx, portfolio in enumerate(portfolios):
+        name = portfolio.get('name', f'Portfolio {idx + 1}')
+        portfolio_returns = portfolio.get('portfolio_returns', None)
 
-        # Clean market_returns
-        market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna().sort_index()
-        logger.debug(f"Processed 'market_returns' for '{market_name}'.")
+        if portfolio_returns is None:
+            logger.warning(f"Portfolio '{name}' has no 'portfolio_returns' key.")
+            continue
 
-        if not market_returns.empty:
-            # Fit GARCH model 
-            try:
-                m_model = arch_model(market_returns * 100, vol='Garch', p=1, q=1, rescale=False)
-                m_model_fit = m_model.fit(disp='off')
-                market_volatility = m_model_fit.conditional_volatility / 100
-                garch_df[market_name] = market_volatility
-                logger.info(f"Fitted GARCH model for market '{market_name}'.")
-            except Exception as e:
-                logger.error(f"GARCH model failed for market '{market_name}': {e}")
-        else:
-            logger.warning(f"Market returns for '{market_name}' are empty after cleaning.")
+        # Clean portfolio_returns
+        portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
+        logger.debug(f"Cleaned 'portfolio_returns' for '{name}'.")
 
+        # Sort the index to ensure proper alignment
+        portfolio_returns = portfolio_returns.sort_index()
+        logger.debug(f"Sorted 'portfolio_returns' for '{name}'.")
 
-        # Iterate over each portfolio
-        for idx, portfolio in enumerate(portfolios):
-            name = portfolio.get('name', f'Portfolio {idx + 1}')
-            portfolio_returns = portfolio.get('portfolio_returns', None)
+        # Multiply returns by 100 to convert to percentage
+        portfolio_returns_pct = portfolio_returns * 100
+        logger.debug(f"Converted 'portfolio_returns' to percentage for '{name}'.")
 
-            if portfolio_returns is None:
-                logger.warning(f"Portfolio '{name}' has no 'portfolio_returns' key.")
-                continue
+        # Fit a GARCH(1,1) model to the portfolio returns
+        try:
+            model = arch_model(portfolio_returns_pct, vol='Garch', p=1, q=1, rescale=False)
+            model_fit = model.fit(disp='off')
+            logger.debug(f"Fitted GARCH(1,1) model for '{name}'.")
+        except Exception as e:
+            logger.error(f"Failed to fit GARCH model for '{name}': {e}")
+            continue
 
-            # Clean portfolio_returns
-            portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
-            logger.debug(f"Cleaned 'portfolio_returns' for '{name}'.")
+        # Get the conditional volatility and divide by 100 to revert to original scale
+        forecasted_volatility = model_fit.conditional_volatility / 100
+        logger.debug(f"Computed forecasted volatility for '{name}'.")
 
-            # Sort the index to ensure proper alignment
-            portfolio_returns = portfolio_returns.sort_index()
-            logger.debug(f"Sorted 'portfolio_returns' for '{name}'.")
+        # Add the volatility series to the garch_df DataFrame
+        garch_df[name] = forecasted_volatility
+        logger.debug(f"Added forecasted volatility for '{name}' to 'garch_df'.")
 
-            # Multiply returns by 100 to convert to percentage
-            portfolio_returns_pct = portfolio_returns * 100
-            logger.debug(f"Converted 'portfolio_returns' to percentage for '{name}'.")
+        # Store color if provided
+        if portfolio_colors:
+            portfolio_colors[name] = colors[idx]
+            logger.debug(f"Assigned color '{colors[idx]}' to portfolio '{name}'.")
+        
 
-            # Fit a GARCH(1,1) model to the portfolio returns
-            try:
-                model = arch_model(portfolio_returns_pct, vol='Garch', p=1, q=1, rescale=False)
-                model_fit = model.fit(disp='off')
-                logger.debug(f"Fitted GARCH(1,1) model for '{name}'.")
-            except Exception as e:
-                logger.error(f"Failed to fit GARCH model for '{name}': {e}")
-                continue
+    # Align all series if needed
+    if should_align:
+        garch_df = align_series(garch_df)
 
-            # Get the conditional volatility and divide by 100 to revert to original scale
-            forecasted_volatility = model_fit.conditional_volatility / 100
-            logger.debug(f"Computed forecasted volatility for '{name}'.")
+    # Process the figure
+    if fig:
+        for name in garch_df.columns:
+            # Retrieve aligned values for the series
+            aligned_values = garch_df[name]
 
-            # Add the volatility series to the garch_df DataFrame
-            garch_df[name] = forecasted_volatility
-            logger.debug(f"Added forecasted volatility for '{name}' to 'garch_df'.")
+            # Determine the color for the series
+            line_color = portfolio_colors.get(name, market_color if name == 'Market' else None)
 
-            # Store color if provided
-            if colors_provided:
-                portfolio_colors[name] = colors[idx]
-                logger.debug(f"Assigned color '{colors[idx]}' to portfolio '{name}'.")
+            # Add trace to the figure for each series
+            fig.add_trace(go.Scatter(
+                x=aligned_values.index,
+                y=aligned_values,
+                mode='lines',
+                name=name,
+                line=dict(
+                    color=line_color,
+                    width=2 if name == 'Market' else 1
+                )
+            ))
+            logger.debug(f"Added trace for '{name}' with color '{line_color}' to the plot.")
 
-        # Process the figure
-        if fig:
-            for name in garch_df.columns:
-                aligned_values = garch_df[name]
+        # Update the layout for the figure
+        fig.update_layout(
+            title="Comparison of GARCH Volatilities",
+            xaxis_title="Date",
+            yaxis_title="Volatility",
+            template="plotly_dark"
+        )
 
-                # Add trace to the figure for each series
-                fig.add_trace(go.Scatter(
-                    x=aligned_values.index,
-                    y=aligned_values,
-                    mode='lines',
-                    name=name,
-                    line=dict(
-                        color=portfolio_colors.get(name, market_color if name == 'Market' else None),
-                        width=2 if name == 'Market' else 1
-                    )
-                ))
-                logger.debug(f"Added aligned trace for '{name}' to the plot.")
+        # Show the plot
+        fig.show()
+        logger.info("Displayed GARCH volatility comparison plot.")
 
-            # Update layout for the entire figure
-            fig.update_layout(
-                title="Comparison of GARCH Volatilities",
-                xaxis_title="Date",
-                yaxis_title="Volatility",
-                template="plotly_dark"
-            )
-
-            # Show the plot
-            fig.show()
-            logger.info("Displayed GARCH volatility comparison plot.")
-
+    # Always return the DataFrame
     return garch_df
 
 def montecarlo(
     portfolios: Union[dict, List[dict]],
     simulation_length: int,
     num_simulations: int = 100,
-    plot: bool = True
+    plot: list[bool, str] = [True, None],
 ) -> Dict[str, pd.DataFrame]:
     """
     Perform Monte Carlo simulations on one or multiple portfolios to simulate future portfolio values and optionally simulate market values.
 
-    Parameters:
-    - portfolios (Union[dict, List[dict]]): A dictionary or list of dictionaries, each representing a portfolio. Each dictionary should contain:
-    - 'name' (str): The name of the portfolio.
-    - 'investments' (list[float]): List of the amounts invested in each asset of the portfolio.
-    - 'portfolio_returns' (pd.Series): Historical returns of the portfolio.
-    - Optionally, the first portfolio can also include:
-        - 'market_returns' (pd.Series): Historical market returns for comparison.
-        - 'market_ticker' (str): Ticker or name for the market (default is 'Market').
-        - 'return_period_days' (int): The number of days in each return period.
+    Parameters
+    ----------
+    portfolios : Union[dict, List[dict]]
+        A dictionary or list of dictionaries, each representing a portfolio.
+    simulation_length : int
+        The number of periods to simulate (e.g., number of days or months).
+    num_simulations : int, optional
+        Number of Monte Carlo simulations to run for each portfolio (default is 100).
+    plot : bool, optional
+        Whether to plot the simulation results (default is True).
+    plot_template : str, optional
+        The Plotly template to use for plotting (default is "plotly_white").
 
-    - simulation_length (int): The number of periods to simulate (e.g., number of days or months).
-    - num_simulations (int, optional): Number of Monte Carlo simulations to run for each portfolio (default is 100).
-    - plot (bool, optional): Whether to plot the simulation results using subplots for each portfolio and the market (default is True).
+    Returns
+    -------
+    Dict[str, pd.DataFrame]
+        A dictionary where the keys are portfolio names (or 'market') and the values are DataFrames
+        with the simulated portfolio values for each simulation.
 
-    Returns:
-    - Dict[str, pd.DataFrame]: A dictionary where the keys are the portfolio names (or 'market') and the values are DataFrames 
-    with the simulated portfolio values for each simulation.
-
-    Raises:
-    - ValueError: If no portfolios are provided.
+    Raises
+    ------
+    ValueError
+        If no portfolios are provided or inputs are invalid.
+    TypeError
+        If `market_returns` is of an invalid type.
     """
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
-
-    simulation_results = {}
-    if len(portfolios) == 0:
-        raise ValueError("At least one portfolio must be provided.")
     
+    logger.debug("Starting Monte Carlo simulation...")
+
+    # Prepare portfolios and colors
+    portfolios = prepare_portfolios(portfolios)
+    logger.info(f"Prepared {len(portfolios)} portfolios for simulation.")
+
+    # Initiate new dictionary for simulation paths 
+    simulation_results = {}
+
+    # Process market return 
+    market_returns, market_name = process_market(portfolios, type="returns")
+    
+    # Other params for montecarlo
     days_per_step = portfolios[0]["return_period_days"]
-    market_returns = portfolios[0].get('market_returns', None)
-    market_name = portfolios[0].get('market_ticker', 'Market')
     total_investment = sum(portfolios[0]['investments'])
 
     def run_monte_carlo(returns_series: pd.Series, num_simulations: int, simulation_length: int, initial_value: float) -> pd.DataFrame:
+        """
+        Function to launch montecarlo simularion 
+        """
         mean_return = returns_series.mean()
         std_dev_return = returns_series.std()
         simulation_results = np.zeros((simulation_length + 1, num_simulations))
@@ -418,20 +390,34 @@ def montecarlo(
             simulation_results[1:, sim] = initial_value * cumulative_returns
         return pd.DataFrame(simulation_results)
 
+    # Iterate portfolios, clean data and launch montecarlo
     for portfolio in portfolios:
         name = portfolio['name']
         investments = portfolio['investments']
-        portfolio_returns = portfolio['portfolio_returns'].dropna()
         initial_value = sum(investments)
-        sim_df = run_monte_carlo(portfolio_returns, num_simulations, simulation_length, initial_value)
-        simulation_results[name] = sim_df
+        portfolio_returns = portfolio['portfolio_returns'].dropna()
 
-    if market_returns is not None:
-        market_returns = market_returns.dropna()
-        market_sim_df = run_monte_carlo(market_returns, num_simulations, simulation_length, total_investment)
-        simulation_results[market_name] = market_sim_df
+        try:
+            sim_df = run_monte_carlo(portfolio_returns, num_simulations, simulation_length, initial_value)
+            simulation_results[name] = sim_df
+            logger.info(f'Successfully completed montecarlo stimulation for {name}')
+        except:
+            simulation_results[name] = None
+            logger.warning(f'Montecarlo simulation failed for {name}')
+            continue
 
+    # Clean and launch montecarlo
+    market_returns = market_returns.dropna()
+    market_sim_df = run_monte_carlo(market_returns, num_simulations, simulation_length, total_investment)
+    simulation_results[market_name] = market_sim_df
+    logger.info(f'Successfully completed montecarlo stimulation for {market_name}')
+
+
+    # If should be plot
     if plot:
+        fig = go.Figure()                       
+        set_plotly_template(plot[1])          # Set the template (default: plotly_dark)
+
         num_plots = len(simulation_results)
         num_cols = 2
         num_rows = -(-num_plots // num_cols)  
@@ -456,6 +442,7 @@ def montecarlo(
 
         fig.update_layout(title_text="Monte Carlo Simulations - Simulation length: "+str(simulation_length)+" (Days x Step: "+str(days_per_step)+") - Simuluations per portfolio: "+str(num_simulations), template="plotly_dark")
         fig.show()
+        logger.info("Displayed Montecarlo comparison plot.")
 
     return simulation_results
 
@@ -463,91 +450,122 @@ def drawdown(
             portfolios: Union[str, List[str]],
             plot: bool = True, 
             colors: Union[str, List[str]] = None,
-            market_color: str = 'green'
+            market_color: str = 'green',
+            should_align: bool = True
 ) -> pd.DataFrame:
     """
-    Plot and compare the drawdowns of multiple portfolios, optionally including a market drawdown for comparison.
+    Calculate and optionally plot the drawdowns of multiple portfolios, with optional market comparison.
 
     Parameters:
-    - portfolios (Union[str, List[str]]): A list of portfolio dictionaries where each dictionary contains:
-    - 'name' (str): The name of the portfolio.
-    - 'portfolio_value' (pd.Series): The series of portfolio values over time.
-    Optionally, the first portfolio can include:
-    - 'market_value' (pd.Series): The market value series for drawdown comparison.
-    
-    - plot (bool, optional): Whether to plot the drawdown comparisons (default is True).
-    - colors (Union[str, List[str]], optional): The colors to use for the portfolio drawdowns. Can be a string (single color for all portfolios) 
-    or a list of colors, one for each portfolio. If not provided, default colors are used.
-    - market_color (str, optional): The color to use for the market drawdown (default is 'green').
+    ----------
+    portfolios : Union[str, List[str]]
+        A list of portfolio dictionaries where each dictionary contains:
+        - 'name' (str): The name of the portfolio.
+        - 'portfolio_value' (pd.Series): The series of portfolio values over time.
+        Optionally, the first portfolio can include:
+        - 'market_value' (pd.Series): The market value series for drawdown comparison.
+
+    plot : bool, optional
+        Whether to plot the drawdown comparisons. Default is True.
+
+    colors : Union[str, List[str]], optional
+        The colors to use for the portfolio drawdowns. Can be:
+        - A single string (same color for all portfolios).
+        - A list of strings (one color per portfolio).
+        If not provided, default colors will be used.
+
+    market_color : str, optional
+        The color to use for the market drawdown. Default is 'green'.
+
+    should_align : bool, optional
+        Whether to align the time indices of all portfolios and the market for consistent comparison.
+        Default is True.
 
     Returns:
-    - pd.DataFrame: A DataFrame containing the drawdown series for each portfolio and the market.
+    -------
+    pd.DataFrame
+        A DataFrame containing the drawdown series for each portfolio and the market, if applicable.
 
     Raises:
-    - ValueError: If no portfolios are provided or if the length of the colors list doesn't match the number of portfolios.
-    """
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
+    ------
+    ValueError
+        If no portfolios are provided or if the length of the colors list does not match the number of portfolios.
 
-    if len(portfolios) == 0:
-        raise ValueError("At least one portfolio must be provided.")
-    
-     # Ensure colors is a list
-    if colors is None:
-        colors = [None] * len(portfolios)
-    elif isinstance(colors, str):
-        colors = [colors]
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
-    else:
-        raise ValueError("Invalid type for 'colors' parameter.")
-    
+    Notes:
+    -----
+    - Drawdown is calculated as the percentage decline from the peak value over time.
+    - If 'market_value' is provided in the first portfolio, its drawdown will also be calculated and included.
+    - When plotting, the market drawdown is visually distinct with the specified `market_color`.
+    """
+
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for simulation.")
+
     def calculate_drawdown(values):
         """Calculate drawdowns given a series of portfolio values."""
         peak = values.cummax()
         drawdown = (values - peak) / peak
         return drawdown * 100  # convert to percentage
     
-    fig = go.Figure()
-    drawdown_data = {}
+    # Initialize the comparison DataFrame and plotly figure
+    drawdown_data = pd.DataFrame()
+    fig = go.Figure() if plot is True else None
 
+    # Map portfolios to colors
+    portfolio_colors = {portfolio['name']: color for portfolio, color in zip(portfolios, colors)}
+
+    # Process portfolio values
     for portfolio, color in zip(portfolios,colors):
         portfolio_name = portfolio['name']
         portfolio_value = portfolio['portfolio_value']
-        drawdown = calculate_drawdown(portfolio_value)
-        drawdown_data[portfolio_name] = drawdown
 
-        # Add portfolio drawdown trace to the plot
-        fig.add_trace(go.Scatter(
-            x=drawdown.index,
-            y=drawdown,
-            mode='lines',
-            name=f"{portfolio_name} (Max DD: {drawdown.min():.2f}%)",
-            line=dict(color=color) if color else {}
-        ))
+        logger.debug(f"Processing portfolio '{portfolio_name}' with color '{color}'.")
+        drawdown_data[portfolio_name] = calculate_drawdown(portfolio_value)
 
-        
-    market_drawdown = calculate_drawdown(portfolios[0]['market_value'])
-    drawdown_data['Market'] = market_drawdown
-    fig.add_trace(go.Scatter(
-        x=market_drawdown.index,
-        y=market_drawdown,
-        mode='lines',
-        name=f"Market (Max DD: {market_drawdown.min():.2f}%)",
-        line=dict(color=market_color, width=2)
-    ))
+    # Process market values 
+    market_values, market_name = process_market(portfolios)
+    market_drawdown = calculate_drawdown(market_values)
+    drawdown_data[market_name] = market_drawdown
 
+    # Align all series if needed
+    if should_align:
+        drawdown_data = align_series(drawdown_data)
+
+    # Plot the data
     if plot:
+        fig = go.Figure()
+        for name, color in portfolio_colors.items():
+            fig.add_trace(go.Scatter(
+                x=drawdown_data.index,
+                y=drawdown_data[name],
+                mode='lines',
+                name=name,
+                line=dict(color=color, width=2)
+            ))
+
+        # Add market drawdown if available
+        if market_name and market_name in drawdown_data:
+            fig.add_trace(go.Scatter(
+                x=drawdown_data.index,
+                y=drawdown_data[market_name],
+                mode='lines',
+                name=market_name,
+                line=dict(color=market_color, width=3)
+            ))
+
+        # Update layout
         fig.update_layout(
             title="Portfolio Drawdown Comparison",
             xaxis_title="Date",
             yaxis_title="Drawdown (%)",
             template="plotly_dark"
         )
-        fig.show()
 
-    return pd.DataFrame(drawdown_data)
+        fig.show()
+        logger.info("Displayed Drawdown comparison plot.")
+
+    return drawdown_data
 
 def heatmap(
         portfolios: Union[dict, List[dict]],
@@ -556,122 +574,103 @@ def heatmap(
         disassemble: bool = False
  )-> None:
     """
-    Plot a heatmap for correlation analysis between portfolios. The user can choose to either show correlations
-    between the overall portfolio returns or break down the portfolios into individual assets.
+    Generate and optionally plot a heatmap for correlation analysis between portfolios or their individual assets.
 
     Parameters:
-    - portfolios (Union[dict, List[dict]]): A dictionary or a list of portfolio dictionaries, each representing a portfolio.
-      Each dictionary should contain:
-      - 'name' (str): The name of the portfolio.
-      - If `disassemble` is True:
-        - 'tickers' (list[str]): A list of asset tickers included in the portfolio.
-        - 'returns' (pd.DataFrame): A DataFrame with portfolio returns for each asset.
-      - If `disassemble` is False:
-        - 'portfolio_returns' (pd.Series): A series of overall portfolio returns over time.
-      Optionally, the first portfolio may contain:
-      - 'market_returns' (pd.Series): Market return series for correlation analysis.
-      - 'market_ticker' (str): Name of the market index (default is 'Market').
+    ----------
+    portfolios : Union[dict, List[dict]]
+        A dictionary or a list of portfolio dictionaries, each representing a portfolio. Each dictionary should contain:
+        - 'name' (str): The name of the portfolio.
+        - If `disassemble` is True:
+            - 'tickers' (list[str]): A list of asset tickers included in the portfolio.
+            - 'returns' (pd.DataFrame): A DataFrame with asset-level returns.
+        - If `disassemble` is False:
+            - 'portfolio_returns' (pd.Series): A series of overall portfolio returns over time.
+        Optionally, the first portfolio may include:
+        - 'market_returns' (pd.Series): Market return series for correlation analysis.
+        - 'market_ticker' (str): Name of the market index (default is 'Market').
 
-    - colors (Union[str, List[str]], optional): A string representing a single color or a list of colors matching the number of portfolios.
-      If not provided, default colors will be used.
+    colors : Union[str, List[str]], optional
+        A string representing a single color or a list of colors corresponding to the portfolios.
+        Default colors are used if not provided.
 
-    - plot (bool, optional): Whether to plot the heatmap using Plotly (default is True).
+    plot : bool, optional
+        Whether to plot the heatmap using Plotly. Default is True.
 
-    - disassemble (bool, optional): Whether to break down portfolios into their individual components (True) or 
-      use overall portfolio returns (False, default).
+    disassemble : bool, optional
+        If True, break down portfolios into individual asset returns for the correlation analysis.
+        If False (default), use overall portfolio returns.
 
     Returns:
-    - pd.DataFrame: A DataFrame with the correlation coefficients between the returns of the portfolios and, optionally, the market.
+    -------
+    pd.DataFrame
+        A DataFrame containing the correlation coefficients between the returns of the portfolios and, optionally, the market.
 
-    Raises:
-    - ValueError: If no portfolios are provided or if the length of the 'colors' list doesn't match the number of portfolios.
+    Notes:
+    -----
+    - If `disassemble` is True, the correlation analysis is performed at the asset level.
+    - If `disassemble` is False, the correlation analysis is based on overall portfolio returns.
+    - The market return series, if provided, is included in the correlation analysis.
+    - The heatmap is visualized using Plotly if `plot=True`.
     """
     
-    # Ensure portfolios is a list
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
 
-    # Ensure colors is a list
-    if colors is None:
-        colors = [None] * len(portfolios)
-    elif isinstance(colors, str):
-        colors = [colors]
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    # Initialize the all_returns dict and plotly figure
+    all_returns = {}
+    fig = go.Figure() if plot is True else None
+
+    # Process market values 
+    market_returns, market_name = process_market(portfolios, type = "returns")
+
+    # Clean, sort and add market_returns to all_returns dict
+    market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna()
+    market_returns = market_returns.sort_index()
+    all_returns[market_name] = market_returns
+
+    # Disassemble portfolios into individual asset returns if nedeed
+    if disassemble:
+        for portfolio in portfolios:
+            tickers = portfolio['tickers']
+            revised_tickers = [ticker + "_Return" for ticker in tickers]
+            
+            # Extract asset returns
+            portfolio_returns = portfolio['returns'][revised_tickers].copy()
+            portfolio_returns.rename(columns=lambda x: x.replace("_Return", ""), inplace=True)
+            all_returns.update(portfolio_returns.to_dict(orient='series'))
+
     else:
-        raise ValueError("Invalid type for 'colors' parameter.")
-    
-    # Check if portfolios are passed
-    if len(portfolios) > 0:
+        # Use overall portfolio returns
+        for portfolio in portfolios:
+            name = portfolio['name']
+            portfolio_returns = portfolio['portfolio_returns']
 
-        # Prepare a dict to store return data from all portfolios
-        all_returns = {}
+            # Ensure portfolio_returns is a Pandas Series
+            if isinstance(portfolio_returns, pd.DataFrame):
+                portfolio_returns = portfolio_returns.squeeze()
 
-        # Extract market returns from the first portfolio if available
-        market_returns = portfolios[0].get('market_returns', None)
-        market_name = portfolios[0].get('market_ticker', 'Market')
+            # Clean, sort and add portfolio_returns to all_returns dict
+            portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
+            portfolio_returns = portfolio_returns.sort_index()
+            all_returns[name] = portfolio_returns
 
-        if market_returns is not None:
-            # Clean market_returns
-            market_returns = market_returns.replace([np.inf, -np.inf], np.nan).dropna()
+    # Create a DataFrame from all the returns
+    combined_returns = pd.DataFrame(all_returns)
 
-            # Ensure market_returns is a Pandas Series
-            if isinstance(market_returns, pd.DataFrame):
-                market_returns = market_returns.squeeze()
+    # Calculate the correlation matrix
+    corr_matrix = combined_returns.corr()
 
-            # Sort the index to ensure proper alignment
-            market_returns = market_returns.sort_index()
+    # Plot the heatmap if plot is True
+    if plot:
+        fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
+        fig.update_layout(
+            title_text="Heatmap of Portfolio Correlations" if not disassemble else "Heatmap of Asset Correlations"
+        )
+        fig.show()
 
-            # Add market returns to the all_returns dictionary
-            all_returns[market_name] = market_returns
-
-        if disassemble:
-            # Disassemble portfolios into individual asset returns
-            for portfolio in portfolios:
-                tickers = portfolio['tickers']
-                revised_tickers = [ticker + "_Return" for ticker in tickers]
-                
-                # Extract asset returns
-                portfolio_returns = portfolio['returns'][revised_tickers].copy()
-                portfolio_returns.rename(columns=lambda x: x.replace("_Return", ""), inplace=True)
-                all_returns.update(portfolio_returns.to_dict(orient='series'))
-
-        else:
-            # Use overall portfolio returns
-            for portfolio in portfolios:
-                name = portfolio['name']
-                portfolio_returns = portfolio['portfolio_returns']
-
-                # Clean portfolio_returns
-                portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
-
-                # Ensure portfolio_returns is a Pandas Series
-                if isinstance(portfolio_returns, pd.DataFrame):
-                    portfolio_returns = portfolio_returns.squeeze()
-
-                # Sort the index to ensure proper alignment
-                portfolio_returns = portfolio_returns.sort_index()
-
-                # Add the portfolio returns to the all_returns dictionary
-                all_returns[name] = portfolio_returns
-
-        # Create a DataFrame from all the returns
-        combined_returns = pd.DataFrame(all_returns)
-
-        # Calculate the correlation matrix
-        corr_matrix = combined_returns.corr()
-
-        # Plot the heatmap if plot is True
-        if plot:
-            fig = px.imshow(corr_matrix, text_auto=True, aspect="auto")
-            fig.update_layout(
-                title_text="Heatmap of Portfolio Correlations" if not disassemble else "Heatmap of Asset Correlations"
-            )
-            fig.show()
-
-        # Possibility to return correlation matrix for further calculations 
-        #return corr_matrix
+    return combined_returns
 
 def pie_chart(
         portfolios: Union[dict, List[dict]], 
@@ -680,127 +679,138 @@ def pie_chart(
         threshold: float = 0.001,
         transparent: bool = False):
     """
-    Plot a pie chart showing the asset allocation of an ETF-based investment strategy for one or multiple portfolios using Plotly.
-    Small allocations (less than the threshold) are grouped into an "All Others" category.
-    
+    Plot a pie chart to visualize the asset allocation of an ETF-based investment strategy for one or multiple portfolios.
+
+    Small allocations (less than the specified threshold) are grouped into an "All Others" category for simplicity.
+
     Parameters:
-    - portfolios (Union[dict, List[dict]]): A dictionary or a list of portfolio dictionaries, each representing a portfolio.
-    - colors (Union[str, List[str]], optional): A string representing a single color or a list of colors for the portfolio segments.
-      If not provided, default colors will be used.
-    - plot (bool, optional): Whether to plot the pie chart using Plotly (default is True).
-    - threshold (float, optional): The allocation threshold below which allocations are grouped into "All Others" (default is 0.001).
-    
+    ----------
+    portfolios : Union[dict, List[dict]]
+        A dictionary or a list of portfolio dictionaries, each representing a portfolio. Each dictionary should contain:
+        - 'name' (str): The name of the portfolio.
+        - 'tickers' (list[str]): A list of asset tickers in the portfolio.
+        - 'weights' (list[float]): A list of corresponding allocation weights for the assets.
+
+    colors : Union[str, List[str]], optional
+        A string representing a single color or a list of colors for the portfolio segments.
+        If not provided, default colors are used.
+
+    plot : bool, optional
+        Whether to display the pie chart using Plotly. Default is True.
+
+    threshold : float, optional
+        The allocation threshold below which allocations are grouped into an "All Others" category. Default is 0.001.
+
+    transparent : bool, optional
+        If True, sets the chart's background to transparent. Default is False.
+
     Returns:
-    - None. The pie chart will be displayed if plot is set to True.
+    -------
+    None
+        The function displays the pie chart if `plot` is set to True. Otherwise, no output is returned.
+
+    Notes:
+    -----
+    - Small allocations below the threshold are summed up into an "All Others" category to declutter the chart.
+    - The pie chart displays each segment's label and percentage inside the chart slices.
+    - The chart's background can be customized with the `transparent` parameter.
     """
 
-    # Ensure portfolios is a list
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
-
-    # Ensure colors is a list
-    if colors is None:
-        colors = [None] * len(portfolios)  # If no colors, default to None for each portfolio
-    elif isinstance(colors, str):
-        colors = [colors] * len(portfolios)  # Apply the same color to all portfolios if a single color is provided
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
-    else:
-        raise ValueError("Invalid type for 'colors' parameter.")
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
     
-    # Check if at least one portfolio is passed
-    if len(portfolios) > 0:
-        for portfolio, color in zip(portfolios, colors):
-            name = portfolio['name']
-            tickers = portfolio['tickers']
-            weights = portfolio['weights']
+    for portfolio, color in zip(portfolios, colors):
+        name = portfolio['name']
+        tickers = portfolio['tickers']
+        weights = portfolio['weights']
 
-            # Create a dictionary of tickers and their corresponding weights
-            allocations = dict(zip(tickers, weights))
+        # Create a dictionary of tickers and their corresponding weights
+        allocations = dict(zip(tickers, weights))
+        logger.debug(f"Allocations for portfolio '{name}': {allocations}")
 
-            # Separate small allocations into "All Others"
-            large_allocations = {k: v for k, v in allocations.items() if v >= threshold}
-            small_allocations_total = sum(v for v in allocations.values() if v < threshold)
+        # Separate small allocations into "All Others"
+        large_allocations = {k: v for k, v in allocations.items() if v >= threshold}
+        small_allocations_total = sum(v for v in allocations.values() if v < threshold)
+        
+        # Create "All Others" if there are small allocations
+        if small_allocations_total > 0:
+            large_allocations["All Others"] = round(small_allocations_total, 8)
+            logger.debug(f"Grouped small allocations into 'All Others' for portfolio '{name}'.")
+        
+        # Extract asset names and their respective sizes
+        labels = list(large_allocations.keys())
+        sizes = list(large_allocations.values())
+        logger.debug(f"Final labels and sizes for portfolio '{name}': {labels}, {sizes}")
+        
+    
+        # Show the pie chart if plot is True
+        if plot:
+            # Create a pie chart
+            fig = go.Figure(data=[go.Pie(
+                labels=labels, 
+                values=sizes, 
+                hole=.3,
+                textinfo='label+percent',  # Show both label and percentage on the chart
+                textposition='inside',  # Position text inside the slices
+            )])
+
+            # Update the layout for the pie chart
+            fig.update_layout(
+                title_text=f"{name} - Portfolio Asset Allocation",
+                showlegend=False,  # Hide the legend
+                title_font_size=20,
+                paper_bgcolor='black',  # Set background color to black
+                font_color='white',     # Set text color to white
+            )
+
+            # Display the pie chart
+            if transparent:
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                logger.info(f"Enabled transparent background for portfolio '{name}' pie chart.")
             
-            # Create "All Others" if there are small allocations
-            if small_allocations_total > 0:
-                large_allocations["All Others"] = round(small_allocations_total, 8)
-            
-            # Extract asset names and their respective sizes
-            labels = list(large_allocations.keys())
-            sizes = list(large_allocations.values())
-            
-            # Show the pie chart if plot is True
-            if plot:
-                # Create a pie chart
-                fig = go.Figure(data=[go.Pie(
-                    labels=labels, 
-                    values=sizes, 
-                    hole=.3,
-                    textinfo='label+percent',  # Show both label and percentage on the chart
-                    textposition='inside',  # Position text inside the slices
-                )])
-
-                # Update the layout for the pie chart
-                fig.update_layout(
-                    title_text=f"{name} - Portfolio Asset Allocation",
-                    showlegend=False,  # Hide the legend
-                    title_font_size=20,
-                    paper_bgcolor='black',  # Set background color to black
-                    font_color='white',     # Set text color to white
-                )
-
-                # Display the pie chart
-                if transparent:
-                    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                fig.show()
+            fig.show()
+            logger.info(f"Displayed pie chart for portfolio '{name}'.")
 
 def sector_pie(
         portfolios: Union[dict, List[dict]], 
         colors: Union[str, List[str]] = None, 
         plot: bool = True,
         threshold: float = 0.001,
-        transparent: bool = False,
-        save_to_csv: bool = False, 
-        filename: str = "sector_data.csv", 
-        verbose: bool = False):
+        transparent: bool = False
+        ) -> pd.DataFrame :
     """
-    Generate a sector distribution pie chart based on equity portfolios.
+    Generate a sector distribution pie chart based on equity portfolios and return a DataFrame of sector weights.
 
     Parameters:
-        portfolios (Union[dict, List[dict]]): Portfolio(s) containing 'name', 'tickers', and 'weights'.
-        colors (Union[str, List[str]], optional): Color scheme for the pie chart. Defaults to None.
-        plot (bool, optional): Whether to display the plot. Defaults to True.
-        threshold (float, optional): Minimum allocation for a sector to be displayed separately. Defaults to 0.001.
-        transparent (bool, optional): Whether the plot background should be transparent. Defaults to False.
-        save_to_csv (bool, optional): Whether to save the sector data to a CSV file. Defaults to False.
-        filename (str, optional): Filename for the CSV output. Defaults to "sector_data.csv".
-        verbose (bool, optional): Whether to display detailed logs. Defaults to False.
+    ----------
+    portfolios : Union[dict, List[dict]]
+        Portfolio(s) containing 'name', 'tickers', and 'weights'.
+    colors : Union[str, List[str]], optional
+        Color scheme for the pie chart. Defaults to None.
+    plot : bool, optional
+        Whether to display the plot. Defaults to True.
+    threshold : float, optional
+        Minimum allocation for a sector to be displayed separately. Defaults to 0.001.
+    transparent : bool, optional
+        Whether the plot background should be transparent. Defaults to False.
 
     Returns:
-        None
+    -------
+    pd.DataFrame
+        A DataFrame containing the aggregated sector weights for all portfolios.
     """
+    
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
 
-    # Ensure portfolios is a list
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
-
-    # Validate colors
-    if isinstance(colors, str):
-        colors = [colors] * len(portfolios)
-    elif isinstance(colors, list) and len(colors) != len(portfolios):
-        raise ValueError("The length of 'colors' must match the number of portfolios.")
-    elif colors is None:
-        colors = [None] * len(portfolios)
-
-    # Check if portfolios are provided
-    if not portfolios:
-        raise ValueError("No portfolios provided.")
-
+    # Initialize a list of sectors data
+    all_sector_data = []
+    
     for portfolio, color in zip(portfolios, colors):
-        if verbose:
-            print(f"Processing portfolio: {portfolio['name']}")
+        portfolio_name = portfolio['name']
+        logger.info(f"Processing portfolio: {portfolio_name}")
 
         # Create allocations
         allocations = dict(zip(portfolio['tickers'], portfolio['weights']))
@@ -813,8 +823,7 @@ def sector_pie(
                 sector = stock.info.get('sector', 'Unknown')
                 sector_info.append({'Sector': sector, 'Weight': weight})
             except Exception as e:
-                if verbose:
-                    print(f"Error fetching data for {ticker}: {e}")
+                logger.warning(f"Error fetching data for {ticker}: {e}")
                 sector_info.append({'Sector': 'Error', 'Weight': weight})
 
         # Create a DataFrame
@@ -829,12 +838,15 @@ def sector_pie(
 
         if small_sectors_total > 0:
             large_sectors["All Others"] = small_sectors_total
+            logger.info(f"Grouped small sectors into 'All Others' for portfolio: {portfolio_name}")
 
-        # Save data
-        if save_to_csv:
-            sector_weights.to_csv(filename, header=["Weight"])
-            if verbose:
-                print(f"Data saved to {filename}")
+        # Add portfolio name to the sector data for aggregation
+        large_sectors_df = pd.DataFrame({
+            'Portfolio': portfolio_name,
+            'Sector': large_sectors.index,
+            'Weight': large_sectors.values
+        })
+        all_sector_data.append(large_sectors_df)
 
         # Plot pie chart
         if plot:
@@ -848,60 +860,57 @@ def sector_pie(
             )])
 
             fig.update_layout(
-                title_text=f"Sector Distribution: {portfolio['name']}",
+                title_text=f"Sector Distribution: {portfolio_name}",
                 paper_bgcolor='rgba(0,0,0,0)' if transparent else 'white',
                 font_color='black',
             )
             fig.show()
+            logger.info(f"Displayed pie chart for portfolio: {portfolio_name}")
 
-    if verbose:
-        print("Processing completed.")
+    # Combine all sector data into a single DataFrame
+    combined_sector_data = pd.concat(all_sector_data, ignore_index=True)
+    logger.info("Sector pie chart generation and aggregation completed.")
+    return combined_sector_data
 
 def country_pie(
         portfolios: Union[dict, List[dict]], 
         colors: Union[str, List[str]] = None, 
         plot: bool = True,
         threshold: float = 0.001,
-        transparent: bool = False,
-        save_to_csv: bool = False, 
-        filename: str = "geographical_data.csv", 
-        verbose: bool = False):
+        transparent: bool = False
+        ) -> pd.DataFrame:
     """
-    Generate a geographical distribution pie chart based on equity portfolios.
+    Generate a geographical distribution pie chart based on equity portfolios and return a DataFrame of country weights.
 
     Parameters:
-        portfolios (Union[dict, List[dict]]): Portfolio(s) containing 'name', 'tickers', and 'weights'.
-        colors (Union[str, List[str]], optional): Color scheme for the pie chart. Defaults to None.
-        plot (bool, optional): Whether to display the plot. Defaults to True.
-        threshold (float, optional): Minimum allocation for a country to be displayed separately. Defaults to 0.001.
-        transparent (bool, optional): Whether the plot background should be transparent. Defaults to False.
-        save_to_csv (bool, optional): Whether to save the geographical data to a CSV file. Defaults to False.
-        filename (str, optional): Filename for the CSV output. Defaults to "geographical_data.csv".
-        verbose (bool, optional): Whether to display detailed logs. Defaults to False.
+    ----------
+    portfolios : Union[dict, List[dict]]
+        Portfolio(s) containing 'name', 'tickers', and 'weights'.
+    colors : Union[str, List[str]], optional
+        Color scheme for the pie chart. Defaults to None.
+    plot : bool, optional
+        Whether to display the plot. Defaults to True.
+    threshold : float, optional
+        Minimum allocation for a country to be displayed separately. Defaults to 0.001.
+    transparent : bool, optional
+        Whether the plot background should be transparent. Defaults to False.
 
     Returns:
-        None
+    -------
+    pd.DataFrame
+        A DataFrame containing the aggregated country weights for all portfolios.
     """
 
-    # Ensure portfolios is a list
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for geographical distribution analysis.")
 
-    # Validate colors
-    if isinstance(colors, str):
-        colors = [colors] * len(portfolios)
-    elif isinstance(colors, list) and len(colors) != len(portfolios):
-        raise ValueError("The length of 'colors' must match the number of portfolios.")
-    elif colors is None:
-        colors = [None] * len(portfolios)
-
-    # Check if portfolios are provided
-    if not portfolios:
-        raise ValueError("No portfolios provided.")
+    # Initiate all_country data list 
+    all_country_data = []
 
     for portfolio, color in zip(portfolios, colors):
-        if verbose:
-            print(f"Processing portfolio: {portfolio['name']}")
+        portfolio_name = portfolio['name']
+        logger.info(f"Processing portfolio: {portfolio_name}")
 
         # Create allocations
         allocations = dict(zip(portfolio['tickers'], portfolio['weights']))
@@ -912,13 +921,12 @@ def country_pie(
             try:
                 stock = yf.Ticker(ticker)
                 country = stock.info.get('country', 'Unknown')
-                geographical_info.append({'Country': country, 'Weight': weight})
+                geographical_info.append({'Portfolio': portfolio_name, 'Country': country, 'Weight': weight})
             except Exception as e:
-                if verbose:
-                    print(f"Error fetching data for {ticker}: {e}")
-                geographical_info.append({'Country': 'Error', 'Weight': weight})
+                logger.warning(f"Error fetching data for {ticker}: {e}")
+                geographical_info.append({'Portfolio': portfolio_name, 'Country': 'Error', 'Weight': weight})
 
-        # Create a DataFrame
+        # Create a DataFrame for this portfolio
         df = pd.DataFrame(geographical_info)
 
         # Aggregate weights by country
@@ -930,12 +938,15 @@ def country_pie(
 
         if small_countries_total > 0:
             large_countries["All Others"] = small_countries_total
+            logger.info(f"Grouped small countries into 'All Others' for portfolio: {portfolio_name}")
 
-        # Save data
-        if save_to_csv:
-            country_weights.to_csv(filename, header=["Weight"])
-            if verbose:
-                print(f"Data saved to {filename}")
+        # Add portfolio name to the country data for aggregation
+        large_countries_df = pd.DataFrame({
+            'Portfolio': portfolio_name,
+            'Country': large_countries.index,
+            'Weight': large_countries.values
+        })
+        all_country_data.append(large_countries_df)
 
         # Plot pie chart
         if plot:
@@ -949,105 +960,137 @@ def country_pie(
             )])
 
             fig.update_layout(
-                title_text=f"Geographical Distribution: {portfolio['name']}",
+                title_text=f"Geographical Distribution: {portfolio_name}",
                 paper_bgcolor='rgba(0,0,0,0)' if transparent else 'white',
                 font_color='black',
             )
             fig.show()
+            logger.info(f"Displayed pie chart for portfolio: {portfolio_name}")
 
-    if verbose:
-        print("Processing completed.")
+    # Combine all country data into a single DataFrame
+    combined_country_data = pd.concat(all_country_data, ignore_index=True)
+    logger.info("Geographical pie chart generation and aggregation completed.")
+    return combined_country_data
     
 def distribution_return(
-    portfolios: Union[str, List[str]],
+    portfolios: Union[dict, List[dict]],
     bins: int = 100,
     colors: Union[str, List[str]] = None,
-    market_color: str = 'green'
+    market_color: str = 'green',
+    plot: bool = True
 ) -> pd.DataFrame:
     """
-    Plot the distribution of portfolio returns over a specified time interval.
+    Plot the distribution of portfolio returns over a specified time interval and return a DataFrame of histogram data.
 
-    Parameters: 
-    portfolio (dict): Portfolio dictionary created from the create_portfolio function.
-    bins (int): Number of bins for the histogram (default is 100).
-    plot (bool): Whether to plot the distribution returns (default is True).
+    Parameters:
+    ----------
+    portfolios : Union[dict, List[dict]]
+        A dictionary or a list of dictionaries representing portfolios. Each dictionary should contain:
+        - 'name' (str): The name of the portfolio.
+        - 'portfolio_returns' (pd.Series): A series of portfolio returns.
+        - 'return_period_days' (int): Number of days in the return period.
+        Optionally, the first portfolio may include:
+        - 'market_returns' (pd.Series): A series of market returns for comparison.
+        - 'market_ticker' (str): The name of the market (default is 'Market').
+
+    bins : int, optional
+        Number of bins for the histogram. Default is 100.
+
+    colors : Union[str, List[str]], optional
+        A string or a list of colors for the portfolios. Defaults to None.
+
+    market_color : str, optional
+        The color to use for the market returns histogram. Default is 'green'.
+
+    plot : bool, optional
+        Whether to display the histogram plot. Default is True.
 
     Returns:
-    
+    -------
+    pd.DataFrame
+        A DataFrame containing the bin edges and the normalized frequencies of returns for each portfolio and the market.
     """
 
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
 
-    if len(portfolios) == 0:
-        raise ValueError("At least one portfolio must be provided.")
+    # Initialize data list and plotly figure if needed
+    fig = go.Figure() if plot is True else None
+    histogram_data = []
     
-     # Ensure colors is a list
-    if colors is None:
-        colors = [None] * len(portfolios)
-    elif isinstance(colors, str):
-        colors = [colors]
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
-    else:
-        raise ValueError("Invalid type for 'colors' parameter.")
-
-    fig = go.Figure()
-    
-
     days_per_step = portfolios[0]["return_period_days"]
     market_returns = portfolios[0].get('market_returns', None)
     market_name = portfolios[0].get('market_ticker', 'Market')
 
-    for portfolio, color in zip(portfolios,colors):
+    for portfolio, color in zip(portfolios, colors):
         portfolio_name = portfolio['name']
         portfolio_returns = portfolio['portfolio_returns']
-        fig.add_trace(go.Histogram(
-        x=portfolio_returns,
-        nbinsx=bins,
-        histnorm='probability density',  # Normalizes histogram so area under histogram equals 1
-        marker=dict(
-            color=color,
-            line=dict(
-                color='black',
-                width=1
-            )
-        ),
-        opacity=1.0,
-        name= portfolio_name
-    ))
-    
-    fig.add_trace(go.Histogram(
-        x=market_returns,
-        nbinsx=bins,
-        histnorm='probability density',  # Normalizes histogram so area under histogram equals 1
-        marker=dict(
-            color=market_color,
-            line=dict(
-                color='black',
-                width=1
-            )
-        ),
-        opacity=1.0,
-        name= market_name
-    ))
 
-    # Update layout to make the plot visually appealing
-    fig.update_layout(
-        title="Distribution of Portfolio Returns",
-        template="plotly_dark",
-        xaxis=dict(
-            title=f"{days_per_step}-Day Returns",
-            tickformat='.2%',  # Formats the x-axis ticks as percentages
-            showgrid=True,
-            zeroline=True
-        ),
-        yaxis_title="Probability Density",
-        bargap=0.02  # Adjusts the gap between bars
-    )
+        # Calculate histogram data
+        hist, bin_edges = np.histogram(portfolio_returns, bins=bins, density=True)
+        histogram_data.append(pd.DataFrame({
+            'Portfolio': portfolio_name,
+            'BinEdges': bin_edges[:-1],  # Exclude the last bin edge
+            'Density': hist
+        }))
 
-    fig.show()
+        # Add portfolio histogram to the plot
+        if fig:
+            fig.add_trace(go.Histogram(
+                x=portfolio_returns,
+                nbinsx=bins,
+                histnorm='probability density',
+                marker=dict(
+                    color=color,
+                    line=dict(color='black', width=1)
+                ),
+                opacity=1.0,
+                name=portfolio_name
+            ))
+
+    # Add market histogram to the plot if market returns are provided
+    if market_returns is not None:
+        hist, bin_edges = np.histogram(market_returns, bins=bins, density=True)
+        histogram_data.append(pd.DataFrame({
+            'Portfolio': market_name,
+            'BinEdges': bin_edges[:-1],
+            'Density': hist
+        }))
+
+        if fig:
+            fig.add_trace(go.Histogram(
+                x=market_returns,
+                nbinsx=bins,
+                histnorm='probability density',
+                marker=dict(
+                    color=market_color,
+                    line=dict(color='black', width=1)
+                ),
+                opacity=1.0,
+                name=market_name
+            ))
+
+    # Combine histogram data into a single DataFrame
+    combined_histogram_data = pd.concat(histogram_data, ignore_index=True)
+
+    # Update layout for the plot
+    if fig:
+        fig.update_layout(
+            title="Distribution of Portfolio Returns",
+            template="plotly_dark",
+            xaxis=dict(
+                title=f"{days_per_step}-Day Returns",
+                tickformat='.2%',
+                showgrid=True,
+                zeroline=True
+            ),
+            yaxis_title="Probability Density",
+            bargap=0.02
+        )
+        fig.show()
+
+    return combined_histogram_data
 
 def simulate_dca(
     portfolios: Union[dict, List[dict]],
@@ -1073,21 +1116,13 @@ def simulate_dca(
     pd.DataFrame: A DataFrame with the portfolio values and total invested amount over time for each portfolio.
     """
 
-    if isinstance(portfolios, dict):
-        portfolios = [portfolios]
+    # Prepare portfolios and colors
+    portfolios, colors = prepare_portfolios_colors(portfolios, colors)
+    logger.info(f"Prepared {len(portfolios)} portfolios for portfolio comparison.")
 
-    if colors is None:
-        colors = [None] * len(portfolios)
-    elif isinstance(colors, str):
-        colors = [colors]
-    elif isinstance(colors, list):
-        if len(colors) != len(portfolios):
-            raise ValueError("The length of 'colors' must match the number of portfolios.")
-    else:
-        raise ValueError("Invalid type for 'colors' parameter.")
-
+    # Initialize the results dict, summary data list and plotly figure
     results = {}
-    fig = go.Figure()
+    fig = go.Figure() if plot is True else None
     summary_data = []
 
     for portfolio, color in zip(portfolios,colors):

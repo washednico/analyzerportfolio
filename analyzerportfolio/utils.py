@@ -8,8 +8,9 @@ from datetime import timedelta
 import re 
 import logging
 from .logger import logger 
-
-import logging
+import os
+from typing import Union, List, Dict, Tuple
+import plotly.io as pio
 
 def configure_logging(level=logging.INFO, log_file=None, console_level=None, verbose=False, style="detailed"):
     """
@@ -795,4 +796,249 @@ def update_portfolio(portfolio_dict):
     )
     return result
 
+
+
+## - Graphics utility functions -- ##
+
+
+def set_plotly_template(
+        template: str = "plotly_dark") -> None:
+    """
+    Set the default Plotly template for visualizations.
+
+    Parameters
+    ----------
+    template : str, optional
+        The name of the Plotly template to set as default. Default is "plotly_dark".
+
+    Returns
+    -------
+    None
+    """
+    try:
+        pio.templates.default = template
+        logger.info(f"Plotly template set to '{template}'.")
+    except ValueError as e:
+        logger.error(f"Invalid template name '{template}': {e}")
+        raise ValueError(f"Invalid template name '{template}'. Check available Plotly templates.") from e
+
+def prepare_portfolios(portfolios: Union[dict, List[dict]]) -> List[dict]:
+    """
+    Ensures portfolios are in a consistent list format and validates their existence.
+
+    Parameters
+    ----------
+    portfolios : Union[dict, List[dict], None]
+        A dictionary, a list of dictionaries, or None representing portfolios.
+
+    Returns
+    -------
+    List[dict]
+        A list of prepared portfolios.
+
+    Raises
+    ------
+    ValueError
+        If no portfolios are provided or if portfolios is None.
+    """
+    # Check if portfolios is None
+    if portfolios is None:
+        logger.error("Portfolios cannot be None.")
+        raise ValueError("Portfolios cannot be None.")
+
+    # Ensure portfolios is a list
+    if isinstance(portfolios, dict):
+        portfolios = [portfolios]
+        logger.debug("Converted a single portfolio dictionary into a list.")
+
+    # Check if portfolios list is empty
+    if len(portfolios) == 0:
+        logger.error("At least one portfolio must be provided.")
+        raise ValueError("At least one portfolio must be provided.")
+
+    return portfolios
+
+def prepare_portfolios_colors(
+    portfolios: Union[dict, List[dict]],
+    colors: Union[None, str, List[str]] = None
+) -> Tuple[List[dict], List[Union[str, None]]]:
+    """
+    Prepares portfolios and colors for consistent processing.
+
+    Parameters
+    ----------
+    portfolios : Union[dict, List[dict]]
+        A dictionary or list of dictionaries representing portfolios.
+    colors : Union[None, str, List[str]], optional
+        Colors associated with each portfolio. Can be None, a single string, or a list of strings.
+
+    Returns
+    -------
+    Tuple[List[dict], List[Union[str, None]]]
+        A tuple of prepared portfolios (as a list) and their corresponding colors (as a list).
+
+    Raises
+    ------
+    ValueError
+        If the length of 'colors' does not match the number of portfolios.
+    TypeError
+        If 'colors' is not of type None, str, or List[str].
+    """
+    # Use prepare_portfolios to validate and prepare portfolios
+    portfolios = prepare_portfolios(portfolios)
+
+    # Prepare colors
+    if colors is None:
+        colors = [None] * len(portfolios)
+        logger.debug("No colors provided; using default colors.")
+    elif isinstance(colors, str):
+        colors = [colors]
+        logger.debug("Single color provided; converted to list.")
+    elif isinstance(colors, list):
+        if len(colors) != len(portfolios):
+            logger.error("Length of 'colors' does not match the number of portfolios.")
+            raise ValueError("The length of 'colors' must match the number of portfolios.")
+    else:
+        logger.error("Invalid type for 'colors' parameter.")
+        raise TypeError("Invalid type for 'colors' parameter.")
+
+    return portfolios, colors
+
+def process_market(
+    portfolios: List[dict],
+    type: str = "value"
+) -> pd.DataFrame:
+    """
+    Processes market values and retrieves the market name.
+
+    Parameters
+    ----------
+    portfolios : List[dict]
+        A list of portfolio dictionaries. The first portfolio containing market data is expected.
+
+    Returns
+    -------
+    Tuple[pd.Series, str]
+        The market values (pd.Series) and the market name (str).
+
+    Raises
+    ------
+    ValueError
+        If market values are not provided or invalid.
+    """
+
+    # Iterate portofolios to find a market_name
+    for portfolio in portfolios:
+        market_type = portfolio.get(f'market_{type}', None)           # Get makret values or returns
+        market_name = portfolio.get('market_ticker', None)            # Get market_ticker (str)
+
+        if market_name and market_type is not None:
+            # Convert in case market data are in pd.Dataframe
+            if isinstance(market_type, pd.DataFrame):
+                market_type = market_type.squeeze()
+                logger.debug(f"Converted Market_{type} from DataFrame to Series.")
+
+            try:
+                market_type.index = pd.to_datetime(market_type.index)
+                logger.debug(f"Successfully loaded Market_{type} for '{market_name}'.")
+                return market_type, market_name
+            except Exception as e:
+                logger.error(f"Error processing  Market_{type} index for '{market_name}': {e}")
+                raise ValueError("Invalid market returns index format.") from e
+        
+    logger.warning("Market returns not found in any portfolio.")
+    raise ValueError("Market returns not provided or invalid.")
+
+def align_series(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aligns all time series in the DataFrame by dropping rows with missing values.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing multiple time series to be aligned.
+
+    Returns
+    -------
+    pd.DataFrame
+        The aligned DataFrame with no missing values.
+
+    Logs
+    ----
+    - Logs the shape of the DataFrame before and after alignment.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("Input must be a pandas DataFrame.")
+
+    original_shape = df.shape
+    aligned_df = df.dropna()
+
+    logger.debug(f"Aligned data by dropping rows with missing values. Original shape: {original_shape}, Final shape: {aligned_df.shape}")
+
+    return aligned_df
+
+def save_data(
+    df: pd.DataFrame,
+    save_format: str = "csv",
+    save_path: str = None,
+    default_filename: str = "default_data",
+) -> None:
+    """
+    Saves a DataFrame based on the provided parameters.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame to be saved.
+    save_format : str, optional
+        The file format to save in ('csv' or 'xlsx'). Default is 'csv'.
+    should_save : bool, optional
+        Whether to save the DataFrame. Default is False.
+    save_path : str, optional
+        The path or directory where the file will be saved. If None, defaults to the working directory.
+    default_filename : str, optional
+        The default filename (without extension) to use if no specific file is provided.
+
+    Returns
+    -------
+    None
+
+    Logs
+    ----
+    - Logs success or failure during the save operation.
+
+    Raises
+    ------
+    ValueError
+        If the specified file format is unsupported.
+    TypeError
+        If the input is not a pandas DataFrame.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("Input must be a pandas DataFrame.")
+
+    if save_format not in ["csv", "xlsx"]:
+        raise ValueError("Unsupported file format. Please choose 'csv' or 'xlsx'.")
+
+    # Determine the full file path
+    if save_path is None:
+        save_path = os.path.join(os.getcwd(), f"{default_filename}.{save_format}")
+    elif os.path.isdir(save_path):
+        save_path = os.path.join(save_path, f"{default_filename}.{save_format}")
+    elif not save_path.endswith(f".{save_format}"):
+        save_path = f"{save_path}.{save_format}"
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+    try:
+        if save_format == "csv":
+            df.to_csv(save_path, index=True)
+            logger.info(f"DataFrame successfully saved as CSV at '{save_path}'.")
+        elif save_format == "xlsx":
+            df.to_excel(save_path, index=True, engine="openpyxl")
+            logger.info(f"DataFrame successfully saved as XLSX at '{save_path}'.")
+    except Exception as e:
+        logger.error(f"Failed to save DataFrame to {save_format.upper()} at '{save_path}': {e}")
+        raise
 
