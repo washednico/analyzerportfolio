@@ -1,81 +1,14 @@
 import yfinance as yf
 import pandas as pd
-import logging
 import numpy as np
 import requests
 from io import StringIO
 from datetime import timedelta
 import re 
-import logging
 from .logger import logger 
 import os
 from typing import Union, List, Dict, Tuple
 
-def configure_logging(level=logging.INFO, log_file=None, console_level=None, verbose=False, style="detailed"):
-    """
-    Configures logging based on user preferences.
-
-    Parameters
-    ----------
-    level : int
-        Logging level for the logger (overall), e.g., logging.DEBUG, logging.INFO, etc.
-    log_file : str, optional
-        File path to save logs. If None, logs are only shown in the console.
-    console_level : int, optional
-        Specific logging level for the console handler. Defaults to the global level.
-    verbose : bool, optional
-        If True, console logs display at DEBUG level, regardless of console_level or global level.
-    style : str, optional
-        Logging style. Options are:
-        - "detailed": Includes timestamps, levels, and logger names.
-        - "print_like": Logs appear simple, like print statements.
-
-    Returns
-    -------
-    logging.Logger
-        Configured logger instance.
-    """
-    logger.setLevel(level)
-
-    # Remove existing handlers to avoid duplicates
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    # Formatters for different styles
-    detailed_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    print_like_formatter = logging.Formatter('%(message)s')
-
-    # Select formatter based on style
-    if style == "detailed":
-        formatter = detailed_formatter
-    elif style == "print_like":
-        formatter = print_like_formatter
-    else:
-        raise ValueError(f"Invalid logging style: {style}. Use 'detailed' or 'print_like'.")
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-
-    # Set console log level based on verbosity or user preference
-    if verbose:
-        console_handler.setLevel(logging.DEBUG)  # Force all logs to show in the console
-    elif console_level:
-        console_handler.setLevel(console_level)  # User-defined console level
-    else:
-        console_handler.setLevel(level)  # Default to global level
-
-    logger.addHandler(console_handler)
-
-    # File handler
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(detailed_formatter)  # Always use detailed format for file logs
-        file_handler.setLevel(level)  # File logs follow the global level
-        logger.addHandler(file_handler)
-
-    logger.info(f"Logging setup complete. Style: {style}, Verbose: {verbose}.")
-    return logger
 
 def get_currency(ticker):
     """Fetch the currency of the given ticker using yfinance."""
@@ -122,43 +55,43 @@ def get_stock_info(ticker):
     try:
         stock_info['currentPrice'] = stock_data['currentPrice']
     except KeyError:
-        logging.warning(f"Current price not found for {ticker}.")
+        logger.warning(f"Current price not found for {ticker}.")
         stock_info['currentPrice'] = None
 
     try:
         stock_info['targetLowPrice'] = stock_data.get('targetLowPrice', stock_info['currentPrice'])
     except KeyError:
-        logging.warning(f"Target low price not found for {ticker}.")
+        logger.warning(f"Target low price not found for {ticker}.")
         stock_info['targetLowPrice'] = stock_info['currentPrice']
 
     try:
         stock_info['targetMeanPrice'] = stock_data.get('targetMeanPrice', stock_info['currentPrice'])
     except KeyError:
-        logging.warning(f"Target mean price not found for {ticker}.")
+        logger.warning(f"Target mean price not found for {ticker}.")
         stock_info['targetMeanPrice'] = stock_info['currentPrice']
 
     try:
         stock_info['targetHighPrice'] = stock_data.get('targetHighPrice', stock_info['currentPrice'])
     except KeyError:
-        logging.warning(f"Target high price not found for {ticker}.")
+        logger.warning(f"Target high price not found for {ticker}.")
         stock_info['targetHighPrice'] = stock_info['currentPrice']
 
     try:
         stock_info['targetMedianPrice'] = stock_data.get('targetMedianPrice', stock_info['currentPrice'])
     except KeyError:
-        logging.warning(f"Target median price not found for {ticker}.")
+        logger.warning(f"Target median price not found for {ticker}.")
         stock_info['targetMedianPrice'] = stock_info['currentPrice']
 
     try:
         stock_info['dividendYield'] = stock_data.get('dividendYield', 0)  # Default to 0 if not available
     except KeyError:
-        logging.warning(f"Dividend yield not found for {ticker}.")
+        logger.warning(f"Dividend yield not found for {ticker}.")
         stock_info['dividendYield'] = 0
 
     try:
         stock_info['currency'] = stock_data['currency']
     except KeyError:
-        logging.warning(f"Currency not found for {ticker}. Defaulting to USD.")
+        logger.warning(f"Currency not found for {ticker}. Defaulting to USD.")
         stock_info['currency'] = 'USD'
 
     return stock_info
