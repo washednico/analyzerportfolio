@@ -195,8 +195,7 @@ print("Information Ratio optimization: ", info_optimized)
         "nbformat>=4.2.0"
     ]
 ```
-We are currently forcing version of `numpy`, `statsmodel` and `scipy` due to compatibility issues.
-See more here https://github.com/statsmodels/statsmodels/issues/9333#issuecomment-2305438605
+
 
 `nbformat` is required not directly for `analyzerportfolio` but indirectly for `plotly`, solving plotting issues.
 
