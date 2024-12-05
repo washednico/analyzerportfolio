@@ -8,6 +8,7 @@ import re
 from .logger import logger 
 import os
 from typing import Union, List, Dict, Tuple
+import logging
 
 
 def get_currency(ticker):
