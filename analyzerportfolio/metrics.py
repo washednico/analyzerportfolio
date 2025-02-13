@@ -672,7 +672,7 @@ def c_ES(portfolio: dict, confidence_level: float = 0.95, horizon_days: int = 1,
         # Filter exceedances above the threshold
         exceedances = sorted_losses[sorted_losses > threshold]
         nu = len(exceedances)
-        print("nu is ", nu)
+        #print("nu is ", nu)
 
         # Ensure sufficient right/left hand losses
         if nu < 10:
