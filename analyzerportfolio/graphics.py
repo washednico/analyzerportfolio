@@ -1087,10 +1087,6 @@ def distribution_return(
 
     return combined_histogram_data
 
-
-
-# To check 
-
 def simulate_dca(
     portfolios: Union[dict, List[dict]],
     initial_investment: float,

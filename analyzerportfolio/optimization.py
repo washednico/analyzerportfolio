@@ -308,8 +308,20 @@ def efficient_frontier(
     colors: Union[str, List[str]] = None,
 ):
     """
-    Computes the efficient frontier for the given portfolio and plots only the upper part of the efficient frontier
-    (above or at the minimum variance portfolio).
+    Computes and plots the upper part of the efficient frontier for a given portfolio,
+    optimizing asset allocations to achieve various target returns while minimizing volatility.
+    
+    Parameters:
+    - portfolio (dict): Dictionary containing portfolio data, including tickers, investments, and market details.
+    - num_points (int): Number of points to compute along the efficient frontier.
+    - multi_thread (bool, optional): Whether to use multi-threading for optimization. Defaults to False.
+    - num_threads (int, optional): Number of threads to use if multi-threading is enabled. Defaults to 4.
+    - method (str, optional): Optimization method for portfolio allocation. Defaults to 'SLSQP'.
+    - additional_portfolios (Union[str, List[str]], optional): Additional portfolios to plot alongside the efficient frontier.
+    - colors (Union[str, List[str]], optional): Colors corresponding to additional portfolios in the plot.
+
+    Returns:
+    - dict: A dictionary where keys represent portfolio points along the efficient frontier, and values are the corresponding portfolios.
     """
     # Ensure portfolios is a list
     if isinstance(additional_portfolios, dict):
