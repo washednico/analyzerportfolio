@@ -125,33 +125,6 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
     pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
     """
 
-    # def validate_tickers(tickers):
-    #     """
-    #     Validates the tickers list to ensure it is properly formatted:
-    #     1. Confirms that `tickers` is a list.
-    #     2. Verifies all elements in the list are strings.
-    #     3. Flags invalid tickers based on specific rules:
-    #     - Tickers should not contain spaces.
-    #     - Tickers should not exceed 15 characters in length (adjustable based on context).
-    #     - Tickers with both letters and numbers should not exceed 10 characters (to detect concatenated tickers).
-        
-    #     Raises:
-    #     ValueError: If any validation condition is violated.
-    #     """
-    #     if not isinstance(tickers, list):
-    #         raise ValueError("Tickers must be provided as a list. Ensure each ticker is separated by a comma.")
-    #     if not all(isinstance(ticker, str) for ticker in tickers):
-    #         raise ValueError("All elements in the tickers list must be strings representing ticker symbols.")
-        
-    #     for ticker in tickers:
-    #         if " " in ticker:  # Flag tickers with spaces as invalid
-    #             raise ValueError(f"Invalid ticker detected: {ticker}. Tickers should not contain spaces.")
-    #         if len(ticker) > 15:  # Flag tickers exceeding maximum reasonable length
-    #             raise ValueError(f"Invalid ticker detected: {ticker}. Check for missing commas.")
-    #         if any(c.isdigit() for c in ticker) and len(ticker) > 10:  # Detect concatenated tickers (letters + numbers)
-    #             raise ValueError(f"Potentially invalid ticker detected: {ticker}. Check for missing commas.")
-    #     return True
-
     def validate_tickers(tickers):
         """
         Validates and corrects a ticker list to ensure there are no formatting issues:
@@ -242,11 +215,10 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
         url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="+risk_free+"&cosd="+start_date+"&coed="+end_date+"&fq=Daily%2C%207-Day&fam=avg"
         
         response = requests.get(url)
-
         if response.status_code == 200:
             # Get the CSV data from the response
             csv_data = response.text
-            
+
             interest_data = pd.read_csv(
                 StringIO(csv_data)
             ).rename(columns={"DATE": "Date", risk_free: "Interest_Rates"})
