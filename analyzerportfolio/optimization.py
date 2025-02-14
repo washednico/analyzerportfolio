@@ -7,6 +7,8 @@ import multiprocessing
 import pandas as pd
 from typing import Union, List, Dict
 
+from analyzerportfolio.logger import logger
+from analyzerportfolio.config import get_plotly_template
 
 
 
@@ -494,7 +496,8 @@ def efficient_frontier(
         title='Efficient Frontier (Upper Part Only)',
         xaxis_title='Volatility',
         yaxis_title='Return',
-        showlegend=True
+        showlegend=True,
+        template = get_plotly_template()
     )
 
     if additional_portfolios is not None:
