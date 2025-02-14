@@ -1246,7 +1246,7 @@ def simulate_dca(
         title=f"Portfolio Growth with DCA and Rebalancing",
         xaxis_title="Date",
         yaxis_title="Value ($)",
-        template="plotly_dark",
+        template=get_plotly_template(),
         annotations=[
             go.layout.Annotation(
                 text=summary_text,
@@ -1358,7 +1358,7 @@ def probability_cone(
             title="Probability Cone",
             xaxis_title="Days",
             yaxis_title="Portfolio Value",
-            template="plotly_dark",
+            template=get_plotly_template(),
             height=600
         )
 
@@ -1479,7 +1479,7 @@ def garch_diff(
         title="Comparison of GARCH Volatilities (Portfolio Returns - Market Returns)",
         xaxis_title="Date",
         yaxis_title="Volatility",
-        template="plotly_dark"
+        template=get_plotly_template()
     )
 
     # Display the plot
