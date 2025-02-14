@@ -410,7 +410,7 @@ Information Ratio optimization:  1.1386493593167448
 efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_1], colors=["orange","blue"])
 ```
 
-![alt text](https://i.imgur.com/ovNJjaJ.png)
+![alt text](https://imgur.com/1J70eUa.png)
 
 ### AI-Powered News Monitoring (`monitor_news`)  
 
