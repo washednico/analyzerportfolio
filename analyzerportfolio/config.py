@@ -6,7 +6,7 @@ from typing import Optional
 ## -- PLOTLY CONFIGURATION -- ##
 
 # Default settings
-DEFAULT_TEMPLATE = "plotly"
+DEFAULT_TEMPLATE = "plotly_dark"
 CUSTOM_TEMPLATES = {
     "transparent": {
         "layout": {
