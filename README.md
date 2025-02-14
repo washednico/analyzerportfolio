@@ -63,25 +63,25 @@ print(ap.download_data.__doc__)
 ```
 
 ```
-   Download stock and market data, convert to base currency, and return the processed data.
-    
-    Parameters:
-    tickers (list): List of stock tickers.
-    market_ticker (str): Market index ticker.
-    start_date (str): Start date for historical data.
-    end_date (str): End date for historical data.
-    base_currency (str): The base currency for the portfolio (e.g., 'USD').
-    risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
-    use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. 
-    folder_path (str): Path to the folder where the cache will be stored. Default is None. 
-    
-    Returns:
-    pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
+Download stock and market data, convert to base currency, and return the processed data.
+
+Parameters:
+- tickers (list): List of stock tickers.
+- market_ticker (str): Market index ticker.
+- start_date (str): Start date for historical data.
+- end_date (str): End date for historical data.
+- base_currency (str): The base currency for the portfolio (e.g., 'USD').
+- risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
+- use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False.
+- folder_path (str): Path to the folder where the cache will be stored. Default is None.
+
+Returns:
+pd.DataFrame: DataFrame containing the adjusted and converted prices for all tickers and the market index.
 ```
  
 #### Examples: Scraping Financial Data  
 
-```
+```python
 ticker = ['AAPL','MSFT','GOOGL','AMZN','TSLA','E']
 investments = [100,200,300,300,200,500]
 start_date = '2019-01-01'
@@ -92,7 +92,7 @@ risk_free = "PCREDIT8"
 rebalancing_period_days = 250
 ```
 
-```
+```python
 # Download historical data
 data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
 ```
@@ -106,38 +106,38 @@ print(ap.create_portfolio.__doc__)
 ```
 
 ```
-    Calculates returns and value amounts for specified stocks over a return period,
-    the portfolio without rebalancing, optionally the portfolio with auto-rebalancing,
-    and includes market index calculations.
+Calculates returns and value amounts for specified stocks over a return period,
+the portfolio without rebalancing, optionally the portfolio with auto-rebalancing,
+and includes market index calculations.
 
-    Parameters:
-    - data: DataFrame with adjusted closing prices (index as dates, columns as tickers).
-    - tickers: List of stock tickers in the portfolio.
-    - investments: List or array of initial investments for each stock.
-    - market_ticker: String representing the market index ticker.
-    - name_portfolio: String representing the name of the portfolio
-    - base_currency: String representing the base currency for the portfolio.
-    - return_period_days: Integer representing the return period in days. Default is 1.
-    - rebalancing_period_days: Optional integer representing the rebalancing period in days.
-                               If None, no rebalancing is performed.
-    - market_ticker: Optional string representing the market index ticker.
-                     If provided, market returns and values will be calculated.
-    - target_weights: Optional list or array of target weights (should sum to 1).
-                      If not provided, it will be calculated from the initial investments.
-    - exclude_ticker_time (int): if ticker is not available withing +- x days from start date, exclude it. Default is 7.
-    - exclude_ticker (bool): Apply the exclusion of tickers based on the exclude_ticker_time parameter. Default is False.
+Parameters:
+- data: DataFrame with adjusted closing prices (index as dates, columns as tickers).
+- tickers: List of stock tickers in the portfolio.
+- investments: List or array of initial investments for each stock.
+- market_ticker: String representing the market index ticker.
+- name_portfolio: String representing the name of the portfolio
+- base_currency: String representing the base currency for the portfolio.
+- return_period_days: Integer representing the return period in days. Default is 1.
+- rebalancing_period_days: Optional integer representing the rebalancing period in days.
+  If None, no rebalancing is performed.
+- market_ticker: Optional string representing the market index ticker.
+  If provided, market returns and values will be calculated.
+- target_weights: Optional list or array of target weights (should sum to 1).
+  If not provided, it will be calculated from the initial investments.
+- exclude_ticker_time (int): if ticker is not available within +- x days from start date, exclude it. Default is 7.
+- exclude_ticker (bool): Apply the exclusion of tickers based on the exclude_ticker_time parameter. Default is False.
 
-    Returns:
-    - returns_df: DataFrame containing:
-        - Stock returns and values for each ticker.
-        - 'Portfolio_Returns' and 'Portfolio_Value' columns for the portfolio without rebalancing.
-        - 'Rebalanced_Portfolio_Returns' and 'Rebalanced_Portfolio_Value' columns (if rebalancing is performed).
-        - 'Market_Returns' and 'Market_Value' columns (if market_ticker is provided).
+Returns:
+- returns_df: DataFrame containing:
+  - Stock returns and values for each ticker.
+  - 'Portfolio_Returns' and 'Portfolio_Value' columns for the portfolio without rebalancing.
+  - 'Rebalanced_Portfolio_Returns' and 'Rebalanced_Portfolio_Value' columns (if rebalancing is performed).
+  - 'Market_Returns' and 'Market_Value' columns (if market_ticker is provided).
 ```
 
 #### Examples: Build portfolio object
 
-```
+```python
 # Build portfolio object 
 portfolio_1 = ap.create_portfolio(data, ticker, investments, market_ticker=market_ticker, name_portfolio="Portfolio1", rebalancing_period_days=rebalancing_period_days)
 ```
@@ -180,7 +180,7 @@ dividend_yield = ap.c_dividend_yield(portfolio_1)
 max_drawdown = ap.c_max_drawdown(portfolio_1)  
 ```
 
-```
+```text
 Beta: 1.2747003924120648
 Alpha: 0.1570779145816794
 Portfolio Return: 20.93218943734265
@@ -204,7 +204,7 @@ These approaches allow users to tailor risk analysis based on their investment s
 
 
 #### Example:  Risk Assessment  
-```
+```python
 import analyzerportfolio as ap
 
 data = ap.download_data(tickers=ticker, start_date=start_date, end_date=end_date, base_currency=base_currency,market_ticker=market_ticker, risk_free=risk_free)
@@ -224,7 +224,7 @@ es_95_b = ap.c_ES(portfolio_1, confidence_level=0.95, method='bootstrap')
 es_95_b_30d = ap.c_ES(portfolio_1, confidence_level=0.95, method='bootstrap', horizon_days=30)
 ```
 
-```
+```text
 VaR (95% Confidence): 1183.2883943760626
 VaR Parametric (95% Confidence): 1237.541927537876
 VaR Bootstrap (95% Confidence): 1184.0467866357724
@@ -250,12 +250,12 @@ By leveraging **analyst recommendations** from the Yahoo Finance API, the packag
   *Calculates the weighted average analyst recommendation for the portfolio using Yahoo Finance data. The score ranges from 1 (Strong Buy) to 5 (Strong Sell).*  
   
 #### Example: Analyst-Based Insights  
-```
+```python
 scenarios = ap.c_analyst_scenarios(portfolio_1)  
 score = ap.c_analyst_score(portfolio_1)  
 ```
 
-```
+```text
 Scenarios: {'Low Scenario': 1431.780134608739, 'Mean Scenario': 1800.2148927427404, 'Median Scenario': 1810.3485673486473, 'High Scenario': 2138.98597652531}
 Score: {'individual_suggestions': [{'ticker': 'AAPL', 'suggestion': 2.0}, {'ticker': 'MSFT', 'suggestion': 1.7}, {'ticker': 'GOOGL', 'suggestion': 1.9}, {'ticker': 'AMZN', 'suggestion': 1.8}, {'ticker': 'TSLA', 'suggestion': 2.7}, {'ticker': 'E', 'suggestion': 2.5}], 'weighted_average_suggestion': 2.15}
 ```
@@ -280,7 +280,7 @@ Score: {'individual_suggestions': [{'ticker': 'AAPL', 'suggestion': 2.0}, {'tick
 
 
 #### Example: Graphics Module  
-```
+```python
 colors_1 = "orange" #OPTIONAL
 colors_4 = ["orange","blue","purple","red"]  #OPTIONAL
 
@@ -363,7 +363,7 @@ ap.probability_cone(portfolio_1, time_horizon=1000)
 
 #### Example: Optimization Module
 
-```
+```python
 sharpe=c_sharpe(portfolio_1)
 portfolio_optimized=optimize(portfolio_1,metric='sharpe')
 sharpe_optimized=c_sharpe(portfolio_optimized)
@@ -393,7 +393,7 @@ print("Information Ratio before optimization:",information_ratio1)
 print("Information Ratio after optimization:",info_optimized)
 ```
         
-```       
+```text      
 Sharpe ratio before optimization:  0.7791344124615548
 Sharpe ratio after optimization:  1.0963836499640336
 Volatility before optimization:  0.3473494407821292
@@ -406,7 +406,7 @@ Information Ratio optimization:  1.1386493593167448
 
 #### Output Efficient Frontier 
 
-```
+```python
 efficient_frontier(portfolio_1,num_points=10, multi_thread=True, num_threads=3, additional_portfolios=[portfolio_optimized,portfolio_1], colors=["orange","blue"])
 ```
 
@@ -433,7 +433,7 @@ The **`monitor_news`** function enables real-time tracking of news for assets in
 
 #### Example: AI-Powered News Monitoring
 
-```
+```python
 # Start monitoring news with OpenAI analysis (Replace 'your-api-key' with an actual API key)
 ap.monitor_news(portfolio, openai_key='your-api-key', delay=1800, loop_forever=True)
 ```
