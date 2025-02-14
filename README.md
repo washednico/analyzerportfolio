@@ -447,4 +447,5 @@ Contributions are welcome! Please submit pull requests or report issues via the 
 ## Contacts
 
 Di Gennaro Leonardo Mario - [Linkedin](https://www.linkedin.com/in/leonardo-mario-di-gennaro-57827522a/) | [E-Mail](leonardodigennaro0@gmail.com) 
+
 Fochi Nicola - [Linkedin](https://www.linkedin.com/in/nicolafochi/) | [E-Mail](nico.fochi@yahoo.com)
