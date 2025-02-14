@@ -438,11 +438,79 @@ The **`monitor_news`** function enables real-time tracking of news for assets in
 ap.monitor_news(portfolio, openai_key='your-api-key', delay=1800, loop_forever=True)
 ```
 
+## Logging & Plotly Customization
+
+AnalyzerPortfolio allows users to configure `logging` and customize `plotly` visualizations to suit their needs. Below are the available customization options. 
+
+### Logging Configuration
+
+The logging system can be customized to control the level of detail, output location, and formatting of log messages.
+
+#### Key logging functions 
+
+1. **`configure_logging`**:
+   - Configures the logging behavior for the package.
+   - **Parameters**:
+     - `level` (int): Overall logging level (e.g., `logging.INFO`, `logging.DEBUG`).
+     - `log_file` (str, optional): Path to a file where logs will be saved. If not provided, logs will only be displayed in the console.
+     - `console_level` (int, optional): Specific logging level for the console. Defaults to the global `level`.
+     - `verbose` (bool, optional): If `True`, console logs will display at `DEBUG` level.
+     - `style` (str, optional): Logging style. Options are:
+       - `"detailed"`: Includes timestamps, levels, and logger names.
+       - `"print_like"`: Logs appear simple, like print statements.
+
+   **Example**:
+   ```python
+   configure_logging(level=logging.DEBUG, log_file="app.log", verbose=True, style="detailed")
+   ```
+
+2. **`reset_logging`**:
+    - Resets the logging configuration by clearing all handlers.
+    - Useful if you want to reconfigure logging from scratch.
+
+3. **`get_logger`**:
+    - Retrieves the global logger for advanced configuration.
+    - Returns a `logging.Logger` instance.
+
+### Plotly Configuration
+AnalyzerPortfolio allows you to customize the appearance of Plotly visualizations by setting templates and transparency options.
+
+#### Key Plotly functions
+
+1. **`set_plotly_template`**:
+   - Sets the global Plotly template and transparency option.
+   - **Parameters**:
+     - `template` (str, optional): The name of the Plotly template to use. Default is `"plotly_dark"`.
+     - `transparent` (bool, optional): If `True`, the `"transparent"` template will be used, which makes the background transparent.
+
+   **Example**:
+   ```python
+   set_plotly_template(template="plotly_white", transparent=False)
+   ```
+
+2. **`get_plotly_template`**:
+   - Retrieves the current global Plotly template.
+   - Returns the name of the active template as a `str`.
+
+   **Example**:
+   ```python
+   template = get_plotly_template()
+   print(f"Current template: {template}")
+    ```
+
+3. **`is_transparent`**:
+   - Checks if the transparent template is currently in use.
+   - Returns`True` if the transparent template is active, otherwise `False`.
+
+   **Example**:
+   ```python
+   if is_transparent():
+       print("Transparent template is active")
+   ```
+
 ## Contributions
 
 Contributions are welcome! Please submit pull requests or report issues via the GitHub repository.
-
-## Contacts
 
 ## Contacts
 
