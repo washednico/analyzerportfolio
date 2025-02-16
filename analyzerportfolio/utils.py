@@ -221,11 +221,11 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
             
             interest_data = pd.read_csv(
                 StringIO(csv_data)
-            ).rename(columns={"observation_date": "Date", risk_free: "Interest_Rates"})
+            ).rename(columns={"DATE": "observation_date", risk_free: "Interest_Rates"})
             
             # Convert 'Date' to datetime and set as index
-            interest_data['Date'] = pd.to_datetime(interest_data['Date'])
-            interest_data.set_index('Date', inplace=True)
+            interest_data['observation_date'] = pd.to_datetime(interest_data['observation_date'])
+            interest_data.set_index('observation_date', inplace=True)
             
 
             # Ensure 'stock_data' index is datetime and aligned
