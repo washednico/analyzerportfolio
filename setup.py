@@ -15,12 +15,13 @@ setup(
         'openai>=1.43.0',
         'pandas>=1.5.1',
         'yfinance>=0.2.32',
-        'numpy==1.26.4',
+        'numpy>=1.26.4',
         'plotly>=5.18.0',
         'arch>=7.0.0',
-        'scipy==1.14.0',
-        "statsmodels==0.14.1",
-        "nbformat>=4.2.0"
+        'scipy>=1.14.0',
+        "statsmodels>=0.14.1",
+        "nbformat>=4.2.0",
+        "xbbg>=0.1.0",
     ],
 
     classifiers=[

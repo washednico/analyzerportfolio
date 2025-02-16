@@ -1,7 +1,7 @@
 from xbbg import blp
 import pandas as pd
 
-#TODO check if the function works
+
 
 
 def bmg_download_data(

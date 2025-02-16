@@ -442,6 +442,38 @@ The **`monitor_news`** function enables real-time tracking of news for assets in
 ap.monitor_news(portfolio, openai_key='your-api-key', delay=1800, loop_forever=True)
 ```
 
+### BMG - Bloomberg Data Downloader 
+
+The **`bmg_download_data`** function enables efficient retrieval of historical financial data from **Bloomberg Terminal**, saving the results as CSV files. It supports multi-ticker downloads, currency conversion, and customizable data fields.  
+
+### Features  
+
+- **Automated Bloomberg Data Extraction** – Fetch historical price data for multiple tickers.  
+- **Currency Conversion** – Retrieve prices in a specified base currency (default: USD).  
+- **CSV Export** – Save the downloaded data as CSV files for easy analysis.  
+- **Customizable Fields** – Specify the Bloomberg field to fetch (default: `last price`).  
+
+### Installation  
+
+Before using this function, ensure that **Bloomberg Terminal** is installed and running. Additionally, install the required **Bloomberg Python API**:  
+
+```bash
+pip install --index-url=https://blpapi.bloomberg.com/repository/releases/python/simple/ blpapi
+```
+#### Example:
+```python
+# Define parameters
+tickers = ["AAPL US Equity", "MSFT US Equity"]
+start_date = "2024-01-01"
+end_date = "2024-02-01"
+folder_path = "./data"
+base_currency = "USD"
+field = "last price"
+
+# Download and save data
+ap.bmg_download_data(tickers, start_date, end_date, folder_path, base_currency, field)
+```
+
 ## Logging & Plotly Customization
 
 AnalyzerPortfolio allows users to configure `logging` and customize `plotly` visualizations to suit their needs. Below are the available customization options. 
