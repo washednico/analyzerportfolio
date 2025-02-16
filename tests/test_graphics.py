@@ -10,6 +10,7 @@ from analyzerportfolio.graphics import (
     pie_chart,
     sector_pie,
     country_pie,
+    garch_diff
     )
 
 from analyzerportfolio.utils import (
@@ -69,6 +70,8 @@ if True:
 
         garch(portfolio_1, colors=colors_1)
         # garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
+
+        garch_diff([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
 
         montecarlo(portfolio_1, simulation_length=1000)
         # montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)

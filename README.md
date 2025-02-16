@@ -315,6 +315,8 @@ ap.portfolio_value([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=col
 ap.garch(portfolio_1, colors=colors_1)
 ap.garch([portfolio_1,portfolio_2,portfolio_3,portfolio_4], colors=colors_4)
 
+ap.garch_diff([portfolio_1,portfolio_2,portfolio_3,portfolio_4])
+
 ap.montecarlo(portfolio_1, simulation_length=1000)
 ap.montecarlo([portfolio_1,portfolio_2,portfolio_3,portfolio_4], simulation_length=1000)
 
@@ -354,6 +356,8 @@ ap.probability_cone(portfolio_1, time_horizon=1000)
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/img13.png?raw=true)
 ### Output Probability Cone
 ![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/img14.png?raw=true)
+### Output Garch Diff
+![alt text](https://github.com/washednico/analyzerportfolio/blob/main/img/img15.png?raw=true)
 
 
 ### Optimization Module
