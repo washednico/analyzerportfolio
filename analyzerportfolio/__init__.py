@@ -41,3 +41,5 @@ from .config import get_plotly_template
 from .config import reset_logging
 from .config import get_logger
 from .config import configure_logging
+
+from .bmg import bmg_download_data

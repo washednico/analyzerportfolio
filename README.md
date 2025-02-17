@@ -442,7 +442,7 @@ The **`monitor_news`** function enables real-time tracking of news for assets in
 ap.monitor_news(portfolio, openai_key='your-api-key', delay=1800, loop_forever=True)
 ```
 
-### BMG - Bloomberg Data Downloader 
+### BMG - Bloomberg Data Downloader - UNDER TESTING
 
 The **`bmg_download_data`** function enables efficient retrieval of historical financial data from **Bloomberg Terminal**, saving the results as CSV files. It supports multi-ticker downloads, currency conversion, and customizable data fields.  
 
