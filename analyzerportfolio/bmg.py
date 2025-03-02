@@ -36,7 +36,7 @@ def bmg_download_data(
         )
 
         data.rename(columns={data.columns[0]: "Date"}, inplace=True)
-        data.rename(columns={data.columns[1]: f"Adj Close {base_currency.upper()}"}, inplace=True)
+        data.rename(columns={data.columns[1]: f"Close {base_currency.upper()}"}, inplace=True)
         data.set_index("Date", inplace=True)
         data = data.iloc[1:]
         data.to_csv(f"{folder_path}/{ticker}.csv")
