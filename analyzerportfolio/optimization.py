@@ -9,10 +9,6 @@ from typing import Union, List, Dict
 from analyzerportfolio.logger import logger
 from analyzerportfolio.config import get_plotly_template
 
-from analyzerportfolio.logger import logger
-from analyzerportfolio.config import get_plotly_template
-
-
 
 def optimize(portfolio: dict, 
              metric: str = 'sharpe'):
