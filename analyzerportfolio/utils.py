@@ -28,7 +28,7 @@ def get_exchange_rate(base_currency, quote_currency, start_date, end_date, excha
     
     # Fetch the exchange rate if not cached
     exchange_rate_ticker = f'{quote_currency}{base_currency}=X'
-    exchange_rate_data = yf.download(exchange_rate_ticker, start=start_date, end=end_date)['Adj Close']
+    exchange_rate_data = yf.download(exchange_rate_ticker, start=start_date, end=end_date)['Close']
     
     # Store the fetched exchange rate in the cache
     exchange_rate_cache[cache_key] = exchange_rate_data
@@ -102,7 +102,7 @@ def get_current_rate(base_currency, quote_currency):
     if base_currency == quote_currency:
         return 1.0
     exchange_rate_ticker = f'{quote_currency}{base_currency}=X'
-    exchange_rate_data = yf.download(exchange_rate_ticker, period='1d', start ="2024-01-01", end=None)['Adj Close'].iloc[-1]
+    exchange_rate_data = yf.download(exchange_rate_ticker, period='1d', start ="2024-01-01", end=None)['Close'].iloc[-1]
     return exchange_rate_data
 
 
@@ -289,7 +289,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 
                 column_split = ticker_data.name.split(" ")
                 currency = column_split[-1]
-                ticker_data.name = "Adj Close"
+                ticker_data.name = "Close"
 
                 first_date_cached = ticker_data.index[0]
                 last_date_cached = ticker_data.index[-1]
@@ -301,7 +301,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 
 
                 if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
-                    missing_data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+                    missing_data = yf.download(ticker, start=start_date, end=end_date)['Close']
                     missing_data.index = missing_data.index.tz_localize(None)
                     # Create a complete date range from start to end date
                     date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
@@ -315,7 +315,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                     full_stock_data = full_stock_data[~full_stock_data.index.duplicated(keep='last')]
                     
                     data_to_save = full_stock_data.copy()
-                    data_to_save.name = f"Adj Close {currency}"
+                    data_to_save.name = f"Close {currency}"
                     data_to_save.to_csv(folder_path + "/"+ticker+".csv")
 
                     if currency != base_currency:
@@ -335,7 +335,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 start_date_dt = pd.to_datetime(start_date)
                 end_date_dt = pd.to_datetime(end_date)
 
-                data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+                data = yf.download(ticker, start=start_date, end=end_date)['Close']
                 data.index = data.index.tz_localize(None)
 
                 date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
@@ -345,7 +345,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
 
                 currency = get_currency(ticker)
                 data_to_save = data.copy()
-                data_to_save.name = f"Adj Close {currency}"
+                data_to_save.name = f"Close {currency}"
                 data_to_save.to_csv(folder_path + "/"+ticker+".csv")
 
                 
@@ -360,7 +360,7 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 
     else:
         for ticker in tickers + [market_ticker]:
-            data = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+            data = yf.download(ticker, start=start_date, end=end_date)['Close']
             currency = get_currency(ticker)
             if currency != base_currency:
                 exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)

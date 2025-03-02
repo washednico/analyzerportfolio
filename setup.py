@@ -14,7 +14,7 @@ setup(
     install_requires=[
         'openai>=1.43.0',
         'pandas>=1.5.1',
-        'yfinance>=0.2.32',
+        'yfinance>=0.2.54',
         'numpy>=1.26.4',
         'plotly>=5.18.0',
         'arch>=7.0.0',
