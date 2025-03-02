@@ -56,4 +56,4 @@ from .config import configure_logging
 from .bmg import bmg_download_data
 
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
