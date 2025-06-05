@@ -8,13 +8,16 @@ import re
 from .logger import logger 
 import os
 from typing import Union, List, Dict, Tuple
-import logging
+from analyzerportfolio.logger import logger
 
 
 def get_currency(ticker):
-    """Fetch the currency of the given ticker using yfinance."""
-    ticker_info = yf.Ticker(ticker).info
-    return ticker_info['currency']
+    """Fetch the currency of the given ticker using yfinance. Give USD as default"""
+    try:
+        ticker_info = yf.Ticker(ticker).info
+        return ticker_info['currency']
+    except:
+        return 'USD'
 
 def get_exchange_rate(base_currency, quote_currency, start_date, end_date, exchange_rate_cache):
     """Fetch the historical exchange rates from quote_currency to base_currency, using a cache to avoid redundant API calls."""
@@ -47,7 +50,6 @@ def convert_to_base_currency(prices, exchange_rate):
         exchange_rate_aligned = exchange_rate_aligned.squeeze()
 
     return prices.multiply(exchange_rate_aligned, axis=0)
-
 
 def get_stock_info(ticker):
     """Fetch stock info including target prices from yfinance."""
@@ -105,20 +107,20 @@ def get_current_rate(base_currency, quote_currency):
     exchange_rate_data = yf.download(exchange_rate_ticker, period='1d', start ="2024-01-01", end=None)['Close'].iloc[-1]
     return exchange_rate_data
 
-
-def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str,risk_free: str = "DTB3", use_cache: bool = False, folder_path: str = None) -> pd.DataFrame:
+def download_data(tickers: list[str], market_ticker: str, start_date: str, end_date: str, base_currency: str = "USD",risk_free: str = "DTB3", use_cache: bool = False, folder_path: str = None, external_tickers:list[str] = None) -> pd.DataFrame:
     """
-    Download stock and market data, convert to base currency, and return the processed data.
+    Download market data. Convert to base currency (if needed). Finally, return the processed data.
     
     Parameters:
-    tickers (list): List of stock tickers.
+    tickers (list): List of asset tickers.
+    external_tickers (list): List of tickers of external data (e.g. Data manual inserted in YFinance).
     market_ticker (str): Market index ticker.
     start_date (str): Start date for historical data.
     end_date (str): End date for historical data.
-    base_currency (str): The base currency for the portfolio (e.g., 'USD').
-    risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD).
+    base_currency (str): The base currency for the historical data (e.g., 'USD'). Default is 'USD'.
+    risk_free (str): The risk free rate to use in the calculations written as ticker on fred (e.g., 'DTB3' for USD). Default is 'DTB3'.
     use_cache (bool): Whether to use cache to retrieve data, if data is not cached it will be stored for future computations. Default is False. 
-    folder_path (str): Path to the folder where the cache will be stored. Default is None. 
+    folder_path (str): Path to the folder where the cache will be stored. 
     
 
     Returns:
@@ -131,6 +133,9 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
         1. Ensures the list contains valid tickers as strings.
         2. Detects and fixes concatenated tickers (e.g., missing commas).
         3. Checks if each ticker follows the expected format (valid stock ticker).
+        
+        Parameters:
+        tickers (list): List of asset tickers.
 
         Returns:
         list: A corrected ticker list with issues fixed where possible.
@@ -167,30 +172,50 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                         break
                 if not fixed:
                     # If unable to fix, log an error and raise an exception
+                    logger.error(f"Invalid ticker at position {idx}: '{ticker}'")
                     raise ValueError(f"Invalid ticker at position {idx}: '{ticker}'")
 
         return corrected_list
             
-    exchange_rate_cache = {}
-    stock_data = pd.DataFrame()
-    tickers = validate_tickers(tickers)
+    
+    exchange_rate_cache = {}                    # Define empty dict to store exchange rate
+    stock_data = pd.DataFrame()                 # Define a pd.Dataframe to store downloaded data
+    tickers = validate_tickers(tickers)         # Valide tickers 
 
-    def cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path):
+    def cached_exchange_rates(base_currency:str, currency, start_date:str, end_date:str, exchange_rate_cache, folder_path:str):
+        """
+        Utility function to check the presence of cached exchange rates data.
+        
+        Parameters: 
+        base_currency (str): The base currency of the historical data.
+        start_date (str): Start date for historical data.
+        end_date (str): End date for historical data.
+        folder_path (str): Path to the cache folder. 
+        currency (str): quoted_currency of the asset.
+
+
+        """
+
+        # Identify the exchange rate's csv
         csv_exchange_rate = "/"+base_currency+"_"+currency+".csv"
+
+
         try:
+            # Read the cached data
             exchange_rate_df = pd.read_csv(folder_path + csv_exchange_rate, index_col=0, parse_dates=True)
             exchange_rate = exchange_rate_df.squeeze()
             exchange_rate.index = pd.to_datetime(exchange_rate.index, errors='coerce')
+
             # Get the first and last date in the cached data
             first_date_cached = exchange_rate.index[0]
             last_date_cached = exchange_rate.index[-1]
-            
 
             # Convert start_date and end_date to datetime for comparison
             start_date_dt = pd.to_datetime(start_date)
             end_date_dt = pd.to_datetime(end_date)
 
-
+            # Check if cached data covers given start and end data
+            # In case download data of the missing period and concatenate with the cached one
             if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
                 missing_data = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
                 exchange_rate.index = pd.to_datetime(exchange_rate.index, errors='coerce')
@@ -278,39 +303,70 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
             interest_rate.to_csv(folder_path + "/"+risk_free+".csv")
             return interest_rate
 
-    # Fetch and process each stock's data
+    # ====== Cache Data ====== # 
     if use_cache:
+        # Loop for each ticker and try to read cached data
         for ticker in tickers + [market_ticker]:
             try:
-                ticker_data_df = pd.read_csv(folder_path + "/"+ticker+".csv", index_col=0, parse_dates=True)
+                ticker_data_df = pd.read_csv(folder_path + "/"+ticker+".csv", index_col=0, parse_dates=True)       
                 ticker_data = ticker_data_df.squeeze()
-                # Ensure the index is datetime
-                ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')
+                ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')  # Ensure the index is datetime
                 
+                # Update ticker data name
                 column_split = ticker_data.name.split(" ")
                 currency = column_split[-1]
                 ticker_data.name = "Close"
 
+                # Get the first and last date in the cached data
                 first_date_cached = ticker_data.index[0]
                 last_date_cached = ticker_data.index[-1]
                 
-
                 # Convert start_date and end_date to datetime for comparison
                 start_date_dt = pd.to_datetime(start_date)
                 end_date_dt = pd.to_datetime(end_date)
                 
+                # ====== Handle external tickers ====== # 
+                if external_tickers and ticker in external_tickers:
 
+                    # Use existing data without modification
+                    data = ticker_data.copy()
+
+                    # Create a complete date range from start to end date
+                    date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
+
+                    # Trim to requested date range 
+                    #data = data.loc[start_date_dt:end_date_dt]
+
+                    # Reindex the data to the complete date range and fill missing entries with NaN
+                    data = data.reindex(date_range)
+
+                    # Add to overall data dataframe
+                    stock_data[ticker] = data
+
+                    # Skit the rest since it is an external ticker
+                    continue
+
+                # Check if cached data covers given start and end data
+                # In case download data of the missing period and concatenate with the cached one
                 if first_date_cached > start_date_dt or last_date_cached < end_date_dt - timedelta(days=1):
+
+                    # Downaload missing data
                     missing_data = yf.download(ticker, start=start_date, end=end_date)['Close']
+
+                    # Remove timezone by making it a naive datime index
                     missing_data.index = missing_data.index.tz_localize(None)
+
                     # Create a complete date range from start to end date
                     date_range = pd.date_range(start=start_date_dt, end=end_date_dt - timedelta(days=1))
 
                     # Reindex the data to the complete date range and fill missing entries with NaN
                     missing_data = missing_data.reindex(date_range)
                     
+                    # Set indexes   
                     ticker_data.index = pd.to_datetime(ticker_data.index, errors='coerce')
                     missing_data.index = pd.to_datetime(missing_data.index, errors='coerce')
+                    
+                    # Concatenate old with new data
                     full_stock_data = pd.concat([ticker_data, missing_data]).sort_index()
                     full_stock_data = full_stock_data[~full_stock_data.index.duplicated(keep='last')]
                     
@@ -318,17 +374,26 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                     data_to_save.name = f"Close {currency}"
                     data_to_save.to_csv(folder_path + "/"+ticker+".csv")
 
-                    if currency != base_currency:
-                        exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
-                        data = convert_to_base_currency(missing_data, exchange_rate)
-                    else:
-                        data = missing_data
-                
+                    # if currency != base_currency:
+                    #     exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
+                    #     data = convert_to_base_currency(missing_data, exchange_rate)
+                    # else:
+                    #     data = full_stock_data
+                    data = full_stock_data
+
                 else:
-                    data = ticker_data[(ticker_data.index >= start_date) & (ticker_data.index <= end_date)]
-                    
-                
-                stock_data[ticker] = ticker_data
+                    data = ticker_data.copy()
+
+                data = data.loc[start_date_dt:end_date_dt]  
+
+                # Apply currency conversion if needed
+                # if currency != base_currency:
+                #     exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, 
+                #                                         exchange_rate_cache, folder_path)
+                #     data = convert_to_base_currency(data, exchange_rate)
+                #data = ticker_data[(ticker_data.index >= start_date) & (ticker_data.index <= end_date)]
+            
+                stock_data[ticker] = data
                         
                     
             except FileNotFoundError:
@@ -347,13 +412,11 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
                 data_to_save = data.copy()
                 data_to_save.name = f"Close {currency}"
                 data_to_save.to_csv(folder_path + "/"+ticker+".csv")
-
                 
-                
-                if currency != base_currency:
+                # if currency != base_currency:
                     
-                    exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
-                    data = convert_to_base_currency(data, exchange_rate)
+                #     exchange_rate = cached_exchange_rates(base_currency, currency, start_date, end_date, exchange_rate_cache, folder_path)
+                #     data = convert_to_base_currency(data, exchange_rate)
         
                 stock_data[ticker] = data
 
@@ -362,9 +425,9 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
         for ticker in tickers + [market_ticker]:
             data = yf.download(ticker, start=start_date, end=end_date)['Close']
             currency = get_currency(ticker)
-            if currency != base_currency:
-                exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
-                data = convert_to_base_currency(data, exchange_rate)
+            # if currency != base_currency:
+            #     exchange_rate = get_exchange_rate(base_currency, currency, start_date, end_date, exchange_rate_cache)
+            #     data = convert_to_base_currency(data, exchange_rate)
             stock_data[ticker] = data  
 
 
@@ -373,21 +436,14 @@ def download_data(tickers: list[str], market_ticker: str, start_date: str, end_d
         interest_data = cached_interest_rates(risk_free, start_date, end_date, folder_path)
     else:
         interest_data = get_interest_rates(risk_free, start_date, end_date)
-        
-        
-            
-             
-            
-    
+                
     if interest_data is not None:
         # Merge on index
         dataframe = stock_data.join(interest_data, how='inner')
         return dataframe
     else:
         return None
-
-        
-        
+       
 def remove_small_weights(portfolio_returns:dict, threshold:float=0.0005) -> dict:
     """
     Removes assets with weights below a specified threshold while maintaining the original structure of the portfolio data.
@@ -465,12 +521,9 @@ def create_portfolio(
         - 'Rebalanced_Portfolio_Returns' and 'Rebalanced_Portfolio_Value' columns (if rebalancing is performed).
         - 'Market_Returns' and 'Market_Value' columns (if market_ticker is provided).
     """
-    
-
-    # Configure the logging
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def count_initial_nans(series):
+        """ Count the number of NaNs in the series."""
         count = 0
         for value in series:
             if pd.isna(value):
@@ -628,7 +681,7 @@ def create_portfolio(
     # Add risk-free return to returns_df
     
 
-        # Add stock returns
+    # Add stock returns
     columns_to_add = {
                         **{f'{ticker}_Return': stock_returns[ticker] for ticker in tickers},
                         **{f'{ticker}_Value': stock_values[ticker] for ticker in tickers},
@@ -671,7 +724,6 @@ def create_portfolio(
     
     return portfolio_returns
 
-
 def read_portfolio_composition(portfolio, min_value=0.01):
     """Read the composition of the portfolio from the portfolio dictionary and filter by minimum weight."""
     composition = {}
@@ -683,7 +735,6 @@ def read_portfolio_composition(portfolio, min_value=0.01):
             composition[ticker] = weight
     
     return composition
-
 
 def update_portfolio(portfolio_dict):
     result = create_portfolio(
@@ -700,9 +751,7 @@ def update_portfolio(portfolio_dict):
         exclude_ticker=portfolio_dict["exclude_ticker"]
     )
     return result
-
-
-
+    
 ## - Graphics utility functions -- ##
 
 def prepare_portfolios(portfolios: Union[dict, List[dict]]) -> List[dict]:
@@ -924,4 +973,3 @@ def save_data(
     except Exception as e:
         logger.error(f"Failed to save DataFrame to {save_format.upper()} at '{save_path}': {e}")
         raise
-
