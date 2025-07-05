@@ -1,3 +1,25 @@
+# TODO
+
+**Data Providers** 
+- [ ]  YahooProvider revision (currency, info, etc..)
+- [ ]  Add providers via abc class
+
+**Cache System**
+- [ ]  Manage cache files along with metadata.json
+- [ ] Integrate with YahooProvider
+
+**Portfolio Object**
+- [ ]  Complete portfolio.py class
+- [ ]  Revision input data (create a DataClass (?))
+
+**Others**
+- [ ] ......
+- [ ] ......
+- [ ] ......
+
+      
+--------------
+
 # AnalyzerPortfolio  
 
 **AnalyzerPortfolio** is a Python package designed for comprehensive portfolio analysis, offering a powerful and user-friendly toolkit for investors, analysts, and researchers. Built primarily on `yfinance`, it allows users to **retrieve financial data**, construct portfolios, and evaluate their performance using industry-standard metrics such as **beta, alpha, Sharpe ratio, Sortino ratio, Value-at-Risk (VaR)**, and more.  
